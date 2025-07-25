@@ -3,21 +3,21 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'rea
 
 const TITULAR_POSITIONS = [
   // Goleiro
-  { left: 120, top: 360 },
+  { left: 112, top: 325 }, // Reduzido de 360 para 340 para dar espaço ao texto
   // Zagueiros
-  { left: 60, top: 280 },
-  { left: 180, top: 280 },
+  { left: 75, top: 265 },  // Ajustado de 60 para 75
+  { left: 142, top: 265 }, // Ajustado de 180 para 195
   // Laterais
-  { left: 30, top: 220 },
+  { left: 3, top: 220 },
   { left: 210, top: 220 },
   // Volantes
-  { left: 90, top: 200 },
-  { left: 150, top: 200 },
+  { left: 75, top: 200 },
+  { left: 144, top: 200 },
   // Meias
-  { left: 70, top: 120 },
+  { left: 45, top: 120 },
   { left: 170, top: 120 },
   // Atacantes
-  { left: 100, top: 60 },
+  { left: 75, top: 60 },
   { left: 140, top: 60 },
 ];
 
@@ -51,18 +51,29 @@ export default function ChooseTeamScreen() {
     setSelectedType(type);
     setSelectedIndex(idx);
 
-    // Descubra a posição (exemplo: pode ser TITULAR_POSITIONS[idx].position ou outro campo)
-    const position = type === 'titular'
-      ? getPositionNameByIndex(idx) // Implemente essa função conforme sua lógica
-      : 'Qualquer'; // Ou defina a posição dos reservas conforme sua regra
+    // Crie uma lista de IDs de jogadores já escolhidos
+    const chosenPlayerIds = [
+      ...chosenTitular.filter(player => player !== null).map(player => player.id),
+      ...chosenReserva.filter(player => player !== null).map(player => player.id)
+    ];
 
-    // Chame a API
+    // Descubra a posição
+    const position = type === 'titular'
+      ? getPositionNameByIndex(idx)
+      : 'Qualquer';
+
+    // Chame a API com os IDs de jogadores já escolhidos
     try {
-      const res = await fetch(`http://localhost:3001/api/jogadores?position=${position}`);
+      // Aqui está a mudança principal: adicione o parâmetro exclude à URL
+      const excludeParam = chosenPlayerIds.length > 0 ? `&exclude=${chosenPlayerIds.join(',')}` : '';
+      const res = await fetch(
+        `http://localhost:3001/api/jogadores?position=${position}${excludeParam}`
+      );
       const data = await res.json();
       setAvailablePlayers(data);
     } catch (err) {
-      setAvailablePlayers([]); // Ou trate erro
+      console.error('Erro ao buscar jogadores:', err);
+      setAvailablePlayers([]);
     }
   };
 
@@ -95,7 +106,7 @@ export default function ChooseTeamScreen() {
       <View style={styles.fieldRow}>
         {/* Reservas à esquerda */}
         <View style={styles.reservesBox}>
-          <View style={styles.reservesGrid}>
+          <ScrollView style={{height: 400, width: 180}} contentContainerStyle={styles.reservesGrid}>
             {Array.from({ length: NUM_RESERVES }).map((_, idx) => (
               <View key={idx} style={styles.reserveItem}>
                 <TouchableOpacity
@@ -125,7 +136,7 @@ export default function ChooseTeamScreen() {
                 )}
               </View>
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Campo oficial */}
@@ -151,7 +162,7 @@ export default function ChooseTeamScreen() {
                 left: pos.left,
                 top: pos.top,
                 alignItems: 'center',
-                width: 80, // aumente para acomodar nomes maiores
+                width: 80,
               }}
             >
               <TouchableOpacity
@@ -170,12 +181,19 @@ export default function ChooseTeamScreen() {
                 )}
               </TouchableOpacity>
               {chosenTitular[idx] && (
-                <View style={{ alignItems: 'center', marginTop: 4, width: 80 }}>
-                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#333' }} numberOfLines={1} ellipsizeMode="tail">
+                <View style={{ 
+                  alignItems: 'center', 
+                  marginTop: 2, // Reduzido de 4 para 2
+                  width: 60,    // Reduzido de 80 para 60
+                  backgroundColor: 'rgba(255,255,255,0.7)',
+                  paddingVertical: 1, // Reduzido de 2 para 1
+                  borderRadius: 4
+                }}>
+                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#333' }} numberOfLines={1} ellipsizeMode="tail">
                     {chosenTitular[idx].name}
                   </Text>
-                  <Text style={{ fontSize: 11, fontWeight: 'bold', color: '#1976d2' }}>
-                    Geral: <Text style={{ fontWeight: 'bold' }}>{chosenTitular[idx].overall}</Text>
+                  <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#00519C' }}>
+                    <Text style={{ fontWeight: 'bold', color: '#000' }}>GER:</Text> {chosenTitular[idx].overall}
                   </Text>
                 </View>
               )}
@@ -256,24 +274,26 @@ const styles = StyleSheet.create({
   },
   reservesBox: {
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',  // Alterado de 'center' para 'flex-start'
     marginRight: 32,
-    height: 400,
+    height: 400,  // Mantém a altura fixa
+    overflow: 'hidden', // Impede que o conteúdo transborde
   },
   reservesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    width: 180, // aumente para caber duas colunas de 80px + margem
+    width: 180,
     marginRight: 32,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
-    minHeight: 400,
+    height: 400, // Altura fixa em vez de minHeight
+    overflow: 'scroll', // Adiciona rolagem quando necessário
   },
   reserveItem: {
     width: 80,
     alignItems: 'center',
     marginBottom: 18,
-    marginHorizontal: 5, // aumente para espaçamento lateral
+    marginHorizontal: 55, // aumente para espaçamento lateral
   },
   reserveCircle: {
     width: 24,
@@ -293,7 +313,7 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     position: 'relative',
     overflow: 'hidden',
-    marginLeft: 40, // Adicione esta linha para mover o campo para a direita
+    marginLeft:0, // Aumentado de 40 para 45 para mover um pouco mais para a direita
   },
   // Linhas do campo
   lineHorizontalTop: {
