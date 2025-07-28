@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 
 const TITULAR_POSITIONS = [
   // Goleiro
@@ -24,6 +25,9 @@ const TITULAR_POSITIONS = [
 const NUM_RESERVES = 12;
 
 export default function ChooseTeamScreen() {
+  const route = useRoute();
+  const { budget } = route.params as { budget: number };
+
   // selectedType: 'titular' | 'reserva'
   const [selectedType, setSelectedType] = useState<'titular' | 'reserva' | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -92,8 +96,15 @@ export default function ChooseTeamScreen() {
     setSelectedIndex(null);
   };
 
+  const calculateTeamValue = () => {
+    const titularValue = chosenTitular.reduce((sum, player) => sum + (player?.overall || 0), 0);
+    const reservaValue = chosenReserva.reduce((sum, player) => sum + (player?.overall || 0), 0);
+    return titularValue + reservaValue;
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Card de instruções */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Hora de começar a escolher o seu time e comissão técnica</Text>
         <Text style={styles.cardText}>
@@ -103,10 +114,26 @@ export default function ChooseTeamScreen() {
         </Text>
       </View>
 
+      {/* Container para os dois novos cards */}
+      <View style={styles.cardsRow}>
+        {/* Card do Caixa */}
+        <View style={styles.budgetCard}>
+          <Text style={styles.budgetText}>💰 Caixa disponível:</Text>
+          <Text style={styles.budgetValue}>€ {budget.toLocaleString()}</Text>
+        </View>
+
+        {/* Card do Valor do Elenco */}
+        <View style={styles.budgetCard}>
+          <Text style={styles.budgetText}>📊 Valor do Elenco:</Text>
+          <Text style={styles.budgetValue}>€ {calculateTeamValue().toLocaleString()}</Text>
+        </View>
+      </View>
+
+      {/* Mini campo e reservas */}
       <View style={styles.fieldRow}>
         {/* Reservas à esquerda */}
         <View style={styles.reservesBox}>
-          <ScrollView style={{height: 400, width: 180}} contentContainerStyle={styles.reservesGrid}>
+          <ScrollView style={{ height: 400, width: 180 }} contentContainerStyle={styles.reservesGrid}>
             {Array.from({ length: NUM_RESERVES }).map((_, idx) => (
               <View key={idx} style={styles.reserveItem}>
                 <TouchableOpacity
@@ -183,10 +210,10 @@ export default function ChooseTeamScreen() {
               {chosenTitular[idx] && (
                 <View style={{ 
                   alignItems: 'center', 
-                  marginTop: 2, // Reduzido de 4 para 2
-                  width: 60,    // Reduzido de 80 para 60
+                  marginTop: 2, 
+                  width: 60, 
                   backgroundColor: 'rgba(255,255,255,0.7)',
-                  paddingVertical: 1, // Reduzido de 2 para 1
+                  paddingVertical: 1, 
                   borderRadius: 4
                 }}>
                   <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#333' }} numberOfLines={1} ellipsizeMode="tail">
@@ -264,6 +291,33 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 15,
     color: '#333',
+  },
+  cardsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 500,
+    marginBottom: 20,
+  },
+  budgetCard: {
+    backgroundColor: '#f8f8f8',
+    padding: 16,
+    borderRadius: 10,
+    width: '48%', // Cada card ocupa metade da largura disponível
+    height: 80, // Altura fixa para os cards
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetText: {
+    fontSize: 14, // Tamanho do texto
+    fontWeight: 'bold',
+    color: '#000', // Texto em preto
+  },
+  budgetValue: {
+    fontSize: 16, // Tamanho do valor
+    fontWeight: 'bold',
+    color: '#43a047', // Valor em verde
   },
   fieldRow: {
     flexDirection: 'row',

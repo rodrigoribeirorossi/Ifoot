@@ -118,7 +118,7 @@ export default function NewGameScreen({ navigation }: NewGameScreenProps) {
 
       <Button
         title="Começar"
-        onPress={() => navigation.navigate('ChooseTeam')}
+        onPress={() => navigation.navigate('ChooseTeam', { budget: selectedDifficulty?.budget })}
         color="#f4511e"
       />
     </View>
