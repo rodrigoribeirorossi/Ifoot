@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 //import DraggableFlatList from 'react-native-draggable-flatlist';
+import { Dimensions, Platform } from 'react-native';
 
 type Player = {
   id: number;
@@ -14,6 +15,12 @@ type Player = {
   energy: number; // 0-100
   isInjured: boolean;
   isSuspended: boolean;
+  // Adicione estas propriedades que vêm do servidor
+  isStarter?: boolean;
+  isCaptain?: boolean;
+  isPenaltyTaker?: boolean;
+  isFreekickTaker?: boolean;
+  isCornerTaker?: boolean;
 };
 
 type FormationType = {
@@ -42,55 +49,56 @@ export default function TeamManagementScreen() {
       name: '4-4-2',
       value: '442',
       positions: [
-        { x: 125, y: 340, role: 'GK' }, // Goleiro
-        { x: 50, y: 280, role: 'LB' }, // Lateral Esquerdo
-        { x: 90, y: 280, role: 'CB' }, // Zagueiro Esquerdo
-        { x: 160, y: 280, role: 'CB' }, // Zagueiro Direito
-        { x: 200, y: 280, role: 'RB' }, // Lateral Direito
-        { x: 50, y: 200, role: 'LM' }, // Meia Esquerda
-        { x: 90, y: 180, role: 'CM' }, // Volante Esquerdo
-        { x: 160, y: 180, role: 'CM' }, // Volante Direito
-        { x: 200, y: 200, role: 'RM' }, // Meia Direita
-        { x: 90, y: 90, role: 'ST' }, // Atacante Esquerdo
-        { x: 160, y: 90, role: 'ST' }, // Atacante Direito
+        { x: 50, y: 90, role: 'GK' },    // Goleiro
+        { x: 20, y: 75, role: 'LB' },    // Lateral Esquerdo
+        { x: 35, y: 75, role: 'CB' },    // Zagueiro Esquerdo
+        { x: 65, y: 75, role: 'CB' },    // Zagueiro Direito
+        { x: 80, y: 75, role: 'RB' },    // Lateral Direito
+        { x: 20, y: 50, role: 'LM' },    // Meia Esquerda
+        { x: 35, y: 50, role: 'CM' },    // Volante Esquerda
+        { x: 65, y: 50, role: 'CM' },    // Volante Direito
+        { x: 80, y: 50, role: 'RM' },    // Meia Direita
+        { x: 35, y: 25, role: 'ST' },    // Atacante Esquerdo
+        { x: 65, y: 25, role: 'ST' },    // Atacante Direito
       ]
     },
     {
       name: '4-3-3',
       value: '433',
       positions: [
-        { x: 125, y: 340, role: 'GK' }, // Goleiro
-        { x: 50, y: 280, role: 'LB' }, // Lateral Esquerdo
-        { x: 90, y: 280, role: 'CB' }, // Zagueiro Esquerdo
-        { x: 160, y: 280, role: 'CB' }, // Zagueiro Direito
-        { x: 200, y: 280, role: 'RB' }, // Lateral Direito
-        { x: 90, y: 200, role: 'CM' }, // Volante Esquerdo
-        { x: 125, y: 180, role: 'CDM' }, // Volante Central
-        { x: 160, y: 200, role: 'CM' }, // Volante Direito
-        { x: 50, y: 90, role: 'LW' }, // Ponta Esquerda
-        { x: 125, y: 90, role: 'ST' }, // Atacante Central
-        { x: 200, y: 90, role: 'RW' }, // Ponta Direita
+        { x: 50, y: 90, role: 'GK' },    // Goleiro
+        { x: 20, y: 75, role: 'LB' },    // Lateral Esquerdo
+        { x: 35, y: 75, role: 'CB' },    // Zagueiro Esquerdo
+        { x: 65, y: 75, role: 'CB' },    // Zagueiro Direito
+        { x: 80, y: 75, role: 'RB' },    // Lateral Direito
+        { x: 35, y: 55, role: 'CM' },    // Meia Esquerda
+        { x: 50, y: 60, role: 'CDM' },   // Volante Central
+        { x: 65, y: 55, role: 'CM' },    // Meia Direito
+        { x: 20, y: 30, role: 'LW' },    // Ponta Esquerda
+        { x: 50, y: 25, role: 'ST' },    // Atacante Central
+        { x: 80, y: 30, role: 'RW' },    // Ponta Direita
       ]
     },
     {
       name: '4-2-3-1',
       value: '4231',
       positions: [
-        { x: 125, y: 340, role: 'GK' }, // Goleiro
-        { x: 50, y: 280, role: 'LB' }, // Lateral Esquerdo
-        { x: 90, y: 280, role: 'CB' }, // Zagueiro Esquerdo
-        { x: 160, y: 280, role: 'CB' }, // Zagueiro Direito
-        { x: 200, y: 280, role: 'RB' }, // Lateral Direito
-        { x: 90, y: 220, role: 'CDM' }, // Volante Esquerdo
-        { x: 160, y: 220, role: 'CDM' }, // Volante Direito
-        { x: 50, y: 150, role: 'CAM' }, // Meia Esquerda
-        { x: 125, y: 150, role: 'CAM' }, // Meia Central
-        { x: 200, y: 150, role: 'CAM' }, // Meia Direita
-        { x: 125, y: 80, role: 'ST' }, // Atacante Central
-      ]
-    },
-  ];
+        { x: 50, y: 90, role: 'GK' },    // Goleiro
+        { x: 20, y: 75, role: 'LB' },    // Lateral Esquerdo
+        { x: 35, y: 75, role: 'CB' },    // Zagueiro Esquerdo
+        { x: 65, y: 75, role: 'CB' },    // Zagueiro Direito
+        { x: 80, y: 75, role: 'RB' },    // Lateral Direito
+        { x: 35, y: 60, role: 'CDM' },   // Volante Esquerda
+        { x: 65, y: 60, role: 'CDM' },   // Volante Direita
+        { x: 20, y: 40, role: 'CAM' },   // Meia Esquerda
+        { x: 50, y: 40, role: 'CAM' },   // Meia Central
+        { x: 80, y: 40, role: 'CAM' },   // Meia Direita
+        { x: 50, y: 25, role: 'ST' },    // Atacante Central
+    ]
   
+  },
+  ];
+    
   const [currentFormation, setCurrentFormation] = useState(formations[0]);
   const [tactic, setTactic] = useState<TacticType>('balanced');
   const [playStyle, setPlayStyle] = useState<PlayStyle>('short_pass');
@@ -99,53 +107,125 @@ export default function TeamManagementScreen() {
   const [freeKickTaker, setFreeKickTaker] = useState<number | null>(null);
   const [cornerTaker, setCornerTaker] = useState<number | null>(null);
   
+  // Adicione esses estados para controle de seleção
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
+  const [selectedPlayerType, setSelectedPlayerType] = useState<'starter' | 'reserve' | null>(null);
+  
   // Simulação de carregamento de dados do time
   useEffect(() => {
     const fetchTeamData = async () => {
       try {
-        // Simular resposta da API - em produção, substitua por chamada real
-        setTeamName('Lendas FC');
+        setLoadingData(true);
         
-        // Simular jogadores titulares e reservas
-        const mockStarters = Array(11).fill(null).map((_, index) => ({
-          id: index + 1,
-          name: `Titular ${index + 1}`,
-          position: getPositionFromIndex(index),
-          overall: Math.floor(Math.random() * 15) + 75, // 75-90
-          photo_url: 'https://example.com/default-player.png',
-          energy: Math.floor(Math.random() * 30) + 70, // 70-100
-          isInjured: false,
-          isSuspended: false,
-        }));
+        // Obter nome do time
+        const teamResponse = await fetch(`http://localhost:3001/api/teams/${teamId}`);
+        const teamData = await teamResponse.json();
+        setTeamName(teamData.name || 'Lendas FC');
         
-        const mockReserves = Array(12).fill(null).map((_, index) => ({
-          id: index + 12,
-          name: `Reserva ${index + 1}`,
-          position: getPositionFromIndex(Math.floor(Math.random() * 11)),
-          overall: Math.floor(Math.random() * 10) + 70, // 70-80
-          photo_url: 'https://example.com/default-player.png',
-          energy: Math.floor(Math.random() * 30) + 70, // 70-100
-          isInjured: index === 3, // Simular um jogador lesionado
-          isSuspended: index === 5, // Simular um jogador suspenso
-        }));
+        // Obter jogadores do time
+        const playersResponse = await fetch(`http://localhost:3001/api/team-players/${teamId}`);
+        const playersData = await playersResponse.json();
         
-        setStarters(mockStarters);
-        setReserves(mockReserves);
-        
-        // Definir capitão por padrão
-        setCaptain(1);
-        setPenaltyTaker(10);
-        setFreeKickTaker(8);
-        setCornerTaker(6);
+        if (playersData && playersData.length > 0) {
+          // Separar titulares e reservas
+          const titulares = playersData
+            .filter((player: Player) => player.isStarter)
+            .slice(0, 11);
+          
+          const suplentes = playersData
+            .filter((player: Player) => !player.isStarter)
+            .slice(0, 12);
+          
+          setStarters(titulares);
+          setReserves(suplentes);
+          
+          // Definir capitão e outros papéis baseados nos dados carregados
+          const captain = playersData.find((player: Player) => player.isCaptain);
+          if (captain) setCaptain(captain.id);
+          
+          const penaltyTaker = playersData.find((player: Player) => player.isPenaltyTaker);
+          if (penaltyTaker) setPenaltyTaker(penaltyTaker.id);
+          
+          const freeKickTaker = playersData.find((player: Player) => player.isFreekickTaker);
+          if (freeKickTaker) setFreeKickTaker(freeKickTaker.id);
+          
+          const cornerTaker = playersData.find((player: Player) => player.isCornerTaker);
+          if (cornerTaker) setCornerTaker(cornerTaker.id);
+        } else {
+          // Se não houver jogadores carregados, use dados simulados como fallback
+          const mockStarters = Array(11).fill(null).map((_, index) => ({
+            id: index + 1,
+            name: `Jogador ${index + 1}`,
+            position: getPositionFromIndex(index),
+            overall: Math.floor(Math.random() * 15) + 75,
+            photo_url: 'https://example.com/default-player.png',
+            energy: Math.floor(Math.random() * 30) + 70,
+            isInjured: false,
+            isSuspended: false,
+          }));
+          
+          const mockReserves = Array(12).fill(null).map((_, index) => ({
+            id: index + 12,
+            name: `Reserva ${index + 1}`,
+            position: getPositionFromIndex(Math.floor(Math.random() * 11)),
+            overall: Math.floor(Math.random() * 10) + 70,
+            photo_url: 'https://example.com/default-player.png',
+            energy: Math.floor(Math.random() * 30) + 70,
+            isInjured: index === 3,
+            isSuspended: index === 5,
+          }));
+          
+          setStarters(mockStarters);
+          setReserves(mockReserves);
+          setCaptain(1);
+          setPenaltyTaker(10);
+          setFreeKickTaker(8);
+          setCornerTaker(6);
+        }
         
         setLoadingData(false);
       } catch (error) {
         console.error("Erro ao carregar dados do time:", error);
+        // Usar dados simulados em caso de erro
+        useFallbackData();
+        setLoadingData(false);
       }
     };
     
+    const useFallbackData = () => {
+      // Implementação de dados simulados
+      const mockStarters = Array(11).fill(null).map((_, index) => ({
+        id: index + 1,
+        name: `Jogador ${index + 1}`,
+        position: getPositionFromIndex(index),
+        overall: Math.floor(Math.random() * 15) + 75,
+        photo_url: 'https://example.com/default-player.png',
+        energy: Math.floor(Math.random() * 30) + 70,
+        isInjured: false,
+        isSuspended: false,
+      }));
+      
+      const mockReserves = Array(12).fill(null).map((_, index) => ({
+        id: index + 12,
+        name: `Reserva ${index + 1}`,
+        position: getPositionFromIndex(Math.floor(Math.random() * 11)),
+        overall: Math.floor(Math.random() * 10) + 70,
+        photo_url: 'https://example.com/default-player.png',
+        energy: Math.floor(Math.random() * 30) + 70,
+        isInjured: index === 3,
+        isSuspended: index === 5,
+      }));
+      
+      setStarters(mockStarters);
+      setReserves(mockReserves);
+      setCaptain(1);
+      setPenaltyTaker(10);
+      setFreeKickTaker(8);
+      setCornerTaker(6);
+    };
+    
     fetchTeamData();
-  }, []);
+  }, [teamId]);
   
   const handleFormationChange = (formationValue: string) => {
     const newFormation = formations.find(f => f.value === formationValue) || formations[0];
@@ -164,8 +244,93 @@ export default function TeamManagementScreen() {
     setReserves(newReserves);
   };
   
-  const handlePlayerSelect = (player: Player) => {
-    setSelectedPlayer(player);
+  // Substitua a função handlePlayerSelect por esta versão atualizada
+  const handlePlayerSelect = (player: Player, playerType: 'starter' | 'reserve') => {
+    // Se nenhum jogador estiver selecionado, selecione este
+    if (selectedPlayerId === null) {
+      setSelectedPlayerId(player.id);
+      setSelectedPlayerType(playerType);
+      setSelectedPlayer(player);
+    }
+    // Se o mesmo jogador for selecionado novamente, desmarque-o
+    else if (selectedPlayerId === player.id) {
+      setSelectedPlayerId(null);
+      setSelectedPlayerType(null);
+      setSelectedPlayer(null);
+    }
+    // Se outro jogador for selecionado, faça a substituição
+    else {
+      // Adicione essa verificação de nulidade
+      if (selectedPlayerType) {
+        // Troca entre titulares e reservas ou dentro do mesmo grupo
+        swapPlayers(selectedPlayerId, player.id, selectedPlayerType, playerType);
+      }
+      
+      // Limpa a seleção
+      setSelectedPlayerId(null);
+      setSelectedPlayerType(null);
+      setSelectedPlayer(null);
+    }
+  };
+  
+  // Adicione esta função para realizar as substituições
+  const swapPlayers = (
+    player1Id: number, 
+    player2Id: number, 
+    player1Type: 'starter' | 'reserve', 
+    player2Type: 'starter' | 'reserve'
+  ) => {
+    // Encontra os índices dos jogadores
+    const findPlayerIndex = (playerId: number, players: Player[]) => {
+      return players.findIndex(p => p.id === playerId);
+    };
+    
+    // Se ambos são titulares
+    if (player1Type === 'starter' && player2Type === 'starter') {
+      const index1 = findPlayerIndex(player1Id, starters);
+      const index2 = findPlayerIndex(player2Id, starters);
+      
+      if (index1 !== -1 && index2 !== -1) {
+        const newStarters = [...starters];
+        [newStarters[index1], newStarters[index2]] = [newStarters[index2], newStarters[index1]];
+        setStarters(newStarters);
+      }
+    }
+    // Se ambos são reservas
+    else if (player1Type === 'reserve' && player2Type === 'reserve') {
+      const index1 = findPlayerIndex(player1Id, reserves);
+      const index2 = findPlayerIndex(player2Id, reserves);
+      
+      if (index1 !== -1 && index2 !== -1) {
+        const newReserves = [...reserves];
+        [newReserves[index1], newReserves[index2]] = [newReserves[index2], newReserves[index1]];
+        setReserves(newReserves);
+      }
+    }
+    // Se um é titular e outro é reserva
+    else {
+      const starterIndex = player1Type === 'starter' 
+        ? findPlayerIndex(player1Id, starters)
+        : findPlayerIndex(player2Id, starters);
+        
+      const reserveIndex = player1Type === 'reserve'
+        ? findPlayerIndex(player1Id, reserves)
+        : findPlayerIndex(player2Id, reserves);
+        
+      if (starterIndex !== -1 && reserveIndex !== -1) {
+        const newStarters = [...starters];
+        const newReserves = [...reserves];
+        
+        const starterPlayer = {...newStarters[starterIndex]};
+        const reservePlayer = {...newReserves[reserveIndex]};
+        
+        newStarters[starterIndex] = reservePlayer;
+        newReserves[reserveIndex] = starterPlayer;
+        
+        setStarters(newStarters);
+        setReserves(newReserves);
+      }
+    }
   };
   
   const handleSetCaptain = (playerId: number) => {
@@ -254,6 +419,8 @@ export default function TeamManagementScreen() {
             </View>
           </View>
           
+          <View style={styles.controlDivider} />
+          
           <View style={styles.controlItem}>
             <Text style={styles.controlLabel}>Tática:</Text>
             <View style={styles.pickerContainer}>
@@ -270,6 +437,8 @@ export default function TeamManagementScreen() {
               </Picker>
             </View>
           </View>
+          
+          <View style={styles.controlDivider} />
           
           <View style={styles.controlItem}>
             <Text style={styles.controlLabel}>Estilo:</Text>
@@ -292,62 +461,72 @@ export default function TeamManagementScreen() {
         <View style={styles.field}>
           {/* Linhas do campo */}
           <View style={styles.fieldMarkings}>
+            {/* Linha central e círculo central */}
             <View style={styles.centerCircle} />
             <View style={styles.centerLine} />
+            
+            {/* Áreas de pênalti */}
             <View style={styles.penaltyAreaTop} />
             <View style={styles.penaltyAreaBottom} />
+            
+            {/* Áreas de gol */}
             <View style={styles.goalAreaTop} />
             <View style={styles.goalAreaBottom} />
+            
+            {/* Linhas laterais (novas) */}
+            <View style={styles.leftLine} />
+            <View style={styles.rightLine} />
+            
+            {/* Marcas de pênalti (novas) */}
+            <View style={styles.penaltyMarkTop} />
+            <View style={styles.penaltyMarkBottom} />
           </View>
           
-          {/* Jogadores no campo */}
-          {starters.map((player, index) => (
-            <TouchableOpacity
-              key={player.id}
-              style={[
-                styles.player,
-                {
-                  left: currentFormation.positions[index].x,
-                  top: currentFormation.positions[index].y,
-                },
-                player.isInjured && styles.injuredPlayer,
-                player.isSuspended && styles.suspendedPlayer,
-                captain === player.id && styles.captainPlayer,
-              ]}
-              onPress={() => handlePlayerSelect(player)}
-            >
-              <View style={styles.playerCircle}>
-                {captain === player.id && (
-                  <View style={styles.captainBadge}>
-                    <Text style={styles.captainText}>C</Text>
-                  </View>
-                )}
-                <Text style={styles.playerNumber}>{index + 1}</Text>
-              </View>
-              <View style={styles.playerLabel}>
-                <Text style={styles.playerName}>{player.name}</Text>
-                <Text style={styles.playerOverall}>{player.overall}</Text>
-              </View>
-              
-              {/* Status icons */}
-              <View style={styles.statusIcons}>
-                {player.isInjured && (
-                  <MaterialIcons name="healing" size={16} color="red" />
-                )}
-                {player.isSuspended && (
-                  <MaterialIcons name="block" size={16} color="orange" />
-                )}
-                {penaltyTaker === player.id && (
-                  <MaterialIcons name="sports-soccer" size={16} color="white" />
-                )}
-              </View>
-              
-              {/* Energy bar */}
-              <View style={styles.energyBarContainer}>
-                <View style={[styles.energyBar, { width: `${player.energy}%` }]} />
-              </View>
-            </TouchableOpacity>
-          ))}
+          {/* Jogadores no campo com posicionamento relativo */}
+          {starters.map((player, index) => {
+            // Verifica se a posição existe no array de posições
+            if (!currentFormation.positions[index]) return null;
+            
+            const position = currentFormation.positions[index];
+            
+            return (
+              <TouchableOpacity
+                key={player.id}
+                style={[
+                  styles.player,
+                  {
+                    position: 'absolute',
+                    left: `${position.x - 5}%`,  // Ajuste fino para centralizar
+                    top: `${position.y - 5}%`,   // Ajuste fino para centralizar
+                  },
+                  player.isInjured && styles.injuredPlayer,
+                  player.isSuspended && styles.suspendedPlayer,
+                  captain === player.id && styles.captainPlayer,
+                  selectedPlayerId === player.id && styles.selectedPlayer,
+                ]}
+                onPress={() => handlePlayerSelect(player, 'starter')}
+              >
+                <View style={styles.playerCircle}>
+                  {captain === player.id && (
+                    <View style={styles.captainBadge}>
+                      <Text style={styles.captainText}>C</Text>
+                    </View>
+                  )}
+                  <Text style={styles.playerNumber}>{index + 1}</Text>
+                </View>
+                <View style={styles.playerLabel}>
+                  <Text style={styles.playerName} numberOfLines={1} ellipsizeMode="tail">
+                    {player.name}
+                  </Text>
+                  <Text style={styles.playerOverall}>{player.overall}</Text>
+                </View>
+                
+                <View style={styles.energyBarContainer}>
+                  <View style={[styles.energyBar, { width: `${player.energy}%` }]} />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
         
         {/* Área de informações sobre o jogador selecionado */}
@@ -389,7 +568,18 @@ export default function TeamManagementScreen() {
                   style={[styles.roleButton, cornerTaker === selectedPlayer.id && styles.activeRoleButton]}
                   onPress={() => setCornerTaker(selectedPlayer.id)}
                 >
-                  <Text style={styles.roleButtonText}>Escanteio</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <FontAwesome5 
+                      name="flag" 
+                      size={12} 
+                      color={cornerTaker === selectedPlayer.id ? '#fff' : '#333'} 
+                      style={{marginRight: 4}}
+                    />
+                    <Text style={[
+                      styles.roleButtonText, 
+                      cornerTaker === selectedPlayer.id && {color: '#fff'}
+                    ]}>Escanteio</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
@@ -410,7 +600,7 @@ export default function TeamManagementScreen() {
                 item.isInjured && styles.reserveItemInjured,
                 item.isSuspended && styles.reserveItemSuspended
               ]}
-              onPress={() => handlePlayerSelect(item)}
+              onPress={() => handlePlayerSelect(item, 'reserve')}
             >
               <View style={styles.reserveItemContent}>
                 <View style={styles.reserveImageContainer}>
@@ -523,7 +713,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
     backgroundColor: '#fff',
-    padding: 10,
+    padding: 15,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -532,15 +722,24 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   controlItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   controlLabel: {
     fontWeight: 'bold',
-    marginRight: 10,
+    marginBottom: 8,
+    fontSize: 14,
+  },
+  controlDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: '#e0e0e0',
+    marginHorizontal: 10,
+    alignSelf: 'center',
   },
   pickerContainer: {
-    width: 150,
+    width: '100%',
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 5,
@@ -548,21 +747,24 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 40,
-    width: 150,
+    width: '100%',
   },
   
   // Campo de futebol
   field: {
     width: '100%',
-    height: 400,
+    height: 0,
+    paddingBottom: '75%',
     backgroundColor: '#43a047',
     borderRadius: 10,
     position: 'relative',
     marginBottom: 20,
+    overflow: 'hidden',
   },
   fieldMarkings: {
     width: '100%',
     height: '100%',
+    position: 'absolute',
   },
   centerCircle: {
     position: 'absolute',
@@ -623,6 +825,42 @@ const styles = StyleSheet.create({
     marginLeft: -30,
     bottom: 0,
   },
+  // Novas linhas laterais
+  leftLine: {
+    position: 'absolute',
+    width: 2,
+    height: '100%',
+    backgroundColor: '#fff',
+    left: 0,
+  },
+  rightLine: {
+    position: 'absolute',
+    width: 2,
+    height: '100%',
+    backgroundColor: '#fff',
+    right: 0,
+  },
+  // Marcas de pênalti
+  penaltyMarkTop: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
+    top: 40,
+    left: '50%',
+    marginLeft: -3,
+  },
+  penaltyMarkBottom: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
+    bottom: 40,
+    left: '50%',
+    marginLeft: -3,
+  },
   
   // Jogadores no campo
   player: {
@@ -640,6 +878,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#fff',
+    marginBottom: 4,
   },
   playerNumber: {
     color: '#fff',
@@ -647,19 +886,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   playerLabel: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: 4,
-    padding: 2,
-    marginTop: 4,
+    padding: 4,
     alignItems: 'center',
     width: '100%',
+    maxWidth: 70,
   },
   playerName: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
+    textAlign: 'center',
+    width: '100%',
   },
   playerOverall: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#1565c0',
   },
@@ -687,18 +928,6 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 10,
     fontWeight: 'bold',
-  },
-  statusIcons: {
-    flexDirection: 'row',
-    position: 'absolute',
-    top: -8,
-    left: '50%',
-    marginLeft: -20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 10,
-    padding: 2,
-    width: 40,
-    justifyContent: 'center',
   },
   energyBarContainer: {
     position: 'absolute',
@@ -771,7 +1000,7 @@ const styles = StyleSheet.create({
   
   // Painel de reservas
   reservesPanel: {
-    width: 230,
+    width: 260,
     backgroundColor: '#fff',
     borderLeftWidth: 1,
     borderLeftColor: '#e0e0e0',
@@ -788,7 +1017,8 @@ const styles = StyleSheet.create({
   reserveItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 5,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
     justifyContent: 'space-between',
@@ -859,5 +1089,13 @@ const styles = StyleSheet.create({
   },
   dragHandle: {
     padding: 10,
+  },
+  selectedPlayer: {
+    transform: [{scale: 1.1}],
+    shadowColor: '#ff9800',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 10,
   },
 });

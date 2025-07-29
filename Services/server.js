@@ -180,7 +180,125 @@ app.post('/api/save-coach', async (req, res) => {
   }
 });
 
-// ... outros endpoints para editar, excluir, listar todos, etc.
+// Obter informações de um time específico
+app.get('/api/teams/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [teams] = await pool.query(
+      'SELECT * FROM user_teams WHERE id = ?',
+      [id]
+    );
+    
+    if (teams.length === 0) {
+      return res.status(404).json({ message: 'Time não encontrado' });
+    }
+    
+    res.json(teams[0]);
+  } catch (error) {
+    console.error('Erro ao buscar time:', error);
+    res.status(500).json({ message: 'Erro interno do servidor' });
+  }
+});
+
+// Obter jogadores de um time específico
+app.get('/api/team-players/:teamId', async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    
+    // Buscar jogadores do time usando as tabelas corretas
+    const [players] = await pool.query(
+      `SELECT j.id, j.name, j.position, j.overall, j.photo_url, 
+              utp.is_starter as isStarter, utp.is_captain as isCaptain, 
+              utp.is_penalty_taker as isPenaltyTaker, utp.is_freekick_taker as isFreekickTaker,
+              utp.is_corner_taker as isCornerTaker,
+              100 as energy, false as isInjured, false as isSuspended
+       FROM user_team_players utp
+       JOIN jogadores j ON utp.player_id = j.id
+       WHERE utp.team_id = ?
+       ORDER BY utp.is_starter DESC, j.overall DESC`,
+      [teamId]
+    );
+    
+    res.json(players);
+  } catch (error) {
+    console.error('Erro ao buscar jogadores do time:', error);
+    res.status(500).json({ message: 'Erro interno do servidor', error: error.message });
+  }
+});
+
+// Adicione este novo endpoint ao seu server.js
+app.put('/api/team-players/:teamId/update-roles', async (req, res) => {
+  const { teamId } = req.params;
+  const { captain, penaltyTaker, freekickTaker, cornerTaker } = req.body;
+  
+  try {
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+    
+    try {
+      // Primeiro, resetamos todos os papéis para este time
+      await connection.query(
+        `UPDATE user_team_players 
+         SET is_captain = false, is_penalty_taker = false, 
+             is_freekick_taker = false, is_corner_taker = false
+         WHERE team_id = ?`,
+        [teamId]
+      );
+      
+      // Definir o capitão
+      if (captain) {
+        await connection.query(
+          `UPDATE user_team_players 
+           SET is_captain = true
+           WHERE team_id = ? AND player_id = ?`,
+          [teamId, captain]
+        );
+      }
+      
+      // Definir o cobrador de pênaltis
+      if (penaltyTaker) {
+        await connection.query(
+          `UPDATE user_team_players 
+           SET is_penalty_taker = true
+           WHERE team_id = ? AND player_id = ?`,
+          [teamId, penaltyTaker]
+        );
+      }
+      
+      // Definir o cobrador de faltas
+      if (freekickTaker) {
+        await connection.query(
+          `UPDATE user_team_players 
+           SET is_freekick_taker = true
+           WHERE team_id = ? AND player_id = ?`,
+          [teamId, freekickTaker]
+        );
+      }
+      
+      // Definir o cobrador de escanteios
+      if (cornerTaker) {
+        await connection.query(
+          `UPDATE user_team_players 
+           SET is_corner_taker = true
+           WHERE team_id = ? AND player_id = ?`,
+          [teamId, cornerTaker]
+        );
+      }
+      
+      await connection.commit();
+      res.json({ success: true });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar papéis dos jogadores:', error);
+    res.status(500).json({ message: 'Erro interno do servidor' });
+  }
+});
 
 app.listen(3001, () => {
   console.log('API rodando em http://localhost:3001');
