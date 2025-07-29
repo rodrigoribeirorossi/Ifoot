@@ -9,6 +9,9 @@ import HistoryScreen from '../Screens/HistoryScreen';
 import NewGameScreen from '../Screens/NewGame';
 import LoadGameScreen from '../Screens/LoadGame';
 import ChooseTeamScreen from '../Screens/ChooseTeam';
+import ChooseCoachScreen from '../Screens/ChooseCoachScreen';
+import SeasonIntroScreen from '../Screens/SeasonIntroScreen';
+import TeamManagementScreen from '../Screens/TeamManagementScreen'; // Esta será a próxima tela após as instruções
 
 type RootStackParamList = {
   Home: undefined;
@@ -18,7 +21,11 @@ type RootStackParamList = {
   Players: undefined;
   Match: undefined;
   History: undefined;
-  ChooseTeam: undefined; // Adicionando a tela de escolha de time
+  ChooseTeam: undefined;
+  ChooseCoach: { teamId: number, budgetRemaining: number };
+  Tournament: { teamId: number };
+  SeasonIntro: { teamId: number };
+  TeamManagement: { teamId: number };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -49,6 +56,20 @@ export default function MainStack() {
       <Stack.Screen name="Players" component={PlayersScreen} />
       <Stack.Screen name="Match" component={MatchScreen} />
       <Stack.Screen name="History" component={HistoryScreen} />
+      <Stack.Screen name="ChooseCoach" component={ChooseCoachScreen} options={{ title: 'Escolha seu Técnico' }} />
+      <Stack.Screen 
+        name="SeasonIntro" 
+        component={SeasonIntroScreen} 
+        options={{ 
+          title: 'Preparando sua Temporada',
+          headerShown: false // Opcional: remover o cabeçalho para uma experiência mais imersiva
+        }} 
+      />
+      <Stack.Screen 
+        name="TeamManagement" 
+        component={TeamManagementScreen} 
+        options={{ title: 'Escalação e Tática' }} 
+      />
     </Stack.Navigator>
   );
 }

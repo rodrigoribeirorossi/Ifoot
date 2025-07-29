@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const TITULAR_POSITIONS = [
   // Goleiro
@@ -26,6 +27,7 @@ const NUM_RESERVES = 12;
 
 export default function ChooseTeamScreen() {
   const route = useRoute();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { budget } = route.params as { budget: number };
 
   // selectedType: 'titular' | 'reserva'
@@ -45,6 +47,7 @@ export default function ChooseTeamScreen() {
     height: number;
     weight: number;
     foot: string;
+    value: number;
   };
 
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
@@ -81,7 +84,22 @@ export default function ChooseTeamScreen() {
     }
   };
 
-  const choosePlayer = (player: any) => {
+  const choosePlayer = (player: Player) => {
+    // Verificar se há orçamento suficiente
+    const playerBeingReplaced = selectedType === 'titular' 
+      ? chosenTitular[selectedIndex!] 
+      : chosenReserva[selectedIndex!];
+    
+    // Calcula o impacto no orçamento (considerando caso seja substituição de jogador)
+    const replacementValue = playerBeingReplaced?.value || 0;
+    const budgetImpact = player.value - replacementValue;
+    
+    // Verifica se há saldo suficiente para a contratação
+    if (calculateRemainingBudget() - budgetImpact < 0) {
+      alert('Saldo insuficiente para contratar este jogador!');
+      return;
+    }
+
     if (selectedType === 'titular' && selectedIndex !== null) {
       const updated = [...chosenTitular];
       updated[selectedIndex] = player;
@@ -92,14 +110,62 @@ export default function ChooseTeamScreen() {
       updated[selectedIndex] = player;
       setChosenReserva(updated);
     }
+    
     setSelectedType(null);
     setSelectedIndex(null);
   };
 
+  // Calcular o valor do elenco baseado no valor dos jogadores
   const calculateTeamValue = () => {
-    const titularValue = chosenTitular.reduce((sum, player) => sum + (player?.overall || 0), 0);
-    const reservaValue = chosenReserva.reduce((sum, player) => sum + (player?.overall || 0), 0);
+    const titularValue = chosenTitular.reduce((sum, player) => sum + (player?.value || 0), 0);
+    const reservaValue = chosenReserva.reduce((sum, player) => sum + (player?.value || 0), 0);
     return titularValue + reservaValue;
+  };
+
+  // Calcular o saldo disponível no caixa
+  const calculateRemainingBudget = () => {
+    return budget - calculateTeamValue();
+  };
+
+  const isTeamComplete = () => {
+    return chosenTitular.every(player => player !== null) && 
+           chosenReserva.every(player => player !== null);
+  };
+
+  const handleSaveTeam = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/save-team', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamName: "Meu Time Histórico", // Você pode adicionar um input para o nome
+          userId: 1, // Usar um sistema de autenticação para obter o ID do usuário
+          formation: "4-4-2", // Você pode adicionar seleção de formação
+          players: [
+            ...chosenTitular.map(player => player),
+            ...chosenReserva.map(player => player)
+          ],
+          budgetRemaining: calculateRemainingBudget(),
+          teamValue: calculateTeamValue()
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert("Time salvo com sucesso!");
+        // Navegar para a tela de escolha do técnico, passando o ID do time e o orçamento restante
+        navigation.navigate('ChooseCoach', { 
+          teamId: result.teamId, 
+          budgetRemaining: calculateRemainingBudget() 
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao salvar o time:", error);
+      alert("Ocorreu um erro ao salvar o time.");
+    }
   };
 
   return (
@@ -119,7 +185,7 @@ export default function ChooseTeamScreen() {
         {/* Card do Caixa */}
         <View style={styles.budgetCard}>
           <Text style={styles.budgetText}>💰 Caixa disponível:</Text>
-          <Text style={styles.budgetValue}>€ {budget.toLocaleString()}</Text>
+          <Text style={styles.budgetValue}>€ {calculateRemainingBudget().toLocaleString()}</Text>
         </View>
 
         {/* Card do Valor do Elenco */}
@@ -244,18 +310,30 @@ export default function ChooseTeamScreen() {
                       ? require('../assets/default-player.png')
                       : { uri: player.photo_url }
                   }
-                  style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 8 }} // aumente o tamanho
+                  style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 8 }}
                   onError={() =>
                     setImageErrors(errors => ({ ...errors, [player.id]: true }))
                   }
                 />
                 <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{player.name}</Text>
                 <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#1976d2' }}>Geral: {player.overall}</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 14, color: '#43a047' }}>Valor: € {player.value.toLocaleString()}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       )}
+
+      {/* Botão para salvar o time */}
+      <TouchableOpacity 
+        style={styles.saveButton}
+        onPress={handleSaveTeam}
+        disabled={!isTeamComplete()}
+      >
+        <Text style={styles.saveButtonText}>
+          {isTeamComplete() ? "Salvar Time e Iniciar Campeonato" : "Complete seu time (11 titulares + 12 reservas)"}
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -501,5 +579,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 8, // aumente o espaçamento
     minWidth: 120, // aumente a largura mínima
+  },
+  saveButton: {
+    backgroundColor: '#43a047',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 20,
+    width: '100%',
+    maxWidth: 500,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

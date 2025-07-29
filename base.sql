@@ -27,6 +27,35 @@ MODIFY club VARCHAR(100) NOT NULL,
 MODIFY photo_url VARCHAR(255) NOT NULL,
 MODIFY foot VARCHAR(10) NOT NULL;
 
+-- Para adicionar a coluna value na tabela jogadores
+ALTER TABLE jogadores ADD COLUMN value INT DEFAULT 1000000;
+
+-- Desativar o modo de atualização segura temporariamente
+SET SQL_SAFE_UPDATES = 0;
+-- Atualizar jogadores com overall menor que 80
+-- Atualizar jogadores com overall entre 71 e 79 (escala gradual)
+UPDATE jogadores 
+SET value = 900000 + ((overall - 71) * 1137500)
+WHERE overall >= 71 AND overall < 80;
+-- Atualizar jogadores com overall menor que 71 (valor base)
+UPDATE jogadores
+SET value = 900000
+WHERE overall < 71;
+-- Atualizar jogadores com overall 80-84
+UPDATE jogadores 
+SET value = 10000000
+WHERE overall >= 80 AND overall < 85;
+-- Atualizar jogadores com overall 85-87
+UPDATE jogadores 
+SET value = 20000000
+WHERE overall >= 85 AND overall < 88;
+-- Atualizar jogadores com overall 88+
+UPDATE jogadores 
+SET value = 30000000
+WHERE overall >= 88;
+-- Reativar o modo de atualização segura
+SET SQL_SAFE_UPDATES = 1;
+
 ALTER TABLE jogadores ADD UNIQUE (name, club);
 
 INSERT INTO jogadores (name, position, age, nationality, overall, club, photo_url, height, weight, foot)
@@ -34,6 +63,12 @@ VALUES
 ('Alisson', 'Goleiro', 31, 'Brasil', 88, 'Liverpool', 'https://url-da-foto.com/alisson.jpg', 1.91, 91, 'Direito'),
 ('Marquinhos', 'Zagueiro', 29, 'Brasil', 85, 'PSG', 'https://url-da-foto.com/marquinhos.jpg', 1.83, 79, 'Direito'),
 ('Casemiro', 'Volante', 32, 'Brasil', 87, 'Manchester United', 'https://url-da-foto.com/casemiro.jpg', 1.85, 84, 'Direito');
+
+
+
+UPDATE jogadores
+SET photo_url = '/assets/alisson.jpeg'
+WHERE name = 'Alisson';
 
 INSERT INTO jogadores (name, position, age, nationality, overall, club, photo_url, height, weight, foot) VALUES
 ('Rafael', 'Goleiro', 34, 'Brasil', 80, 'São Paulo', 'https://spfc.com.br/fotos/rafael.jpg', 1.92, 88, 'Direito'),
