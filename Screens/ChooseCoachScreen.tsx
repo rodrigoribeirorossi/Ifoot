@@ -11,6 +11,7 @@ type Coach = {
   overall: number;
   photo_url: string;
   value: number;
+  isFree?: boolean; // Novo campo para marcar o técnico gratuito
 };
 
 export default function ChooseCoachScreen() {
@@ -27,14 +28,38 @@ export default function ChooseCoachScreen() {
     fetchCoaches();
   }, []);
 
+  // Cria um técnico gratuito padrão
+  const createFreeCoach = (): Coach => {
+    return {
+      id: 999999, // ID único para o técnico gratuito
+      name: "Assistente Técnico",
+      nationality: "Brasil",
+      age: 45,
+      overall: 60, // Overall mais baixo que os técnicos pagos
+      photo_url: "https://cdn-icons-png.flaticon.com/512/3003/3003035.png",
+      value: 0, // Gratuito
+      isFree: true
+    };
+  };
+
   const fetchCoaches = async () => {
     try {
       const res = await fetch(`http://localhost:3001/api/tecnicos?budget=${budgetRemaining}`);
-      const data = await res.json();
+      let data = await res.json();
+      
+      // Verifica se já existe um técnico gratuito
+      const hasFreeCoach = data.some((coach: Coach) => coach.value === 0);
+      
+      // Se não tiver técnico gratuito ou não houver técnicos acessíveis, adicione um
+      if (!hasFreeCoach || (budgetRemaining <= 0 && data.every((coach: Coach) => coach.value > budgetRemaining))) {
+        data = [...data, createFreeCoach()];
+      }
+      
       setCoaches(data);
     } catch (err) {
       console.error('Erro ao buscar técnicos:', err);
-      setCoaches([]);
+      // Em caso de erro, pelo menos mostra o técnico gratuito
+      setCoaches([createFreeCoach()]);
     }
   };
 
@@ -106,10 +131,11 @@ export default function ChooseCoachScreen() {
             key={coach.id} 
             style={[
               styles.coachCard,
-              selectedCoach?.id === coach.id ? styles.selectedCoach : null
+              selectedCoach?.id === coach.id ? styles.selectedCoach : null,
+              coach.isFree ? styles.freeCoachCard : null
             ]}
             onPress={() => handleSelectCoach(coach)}
-            disabled={coach.value > budgetRemaining}
+            disabled={!coach.isFree && coach.value > budgetRemaining}
           >
             <Image
               source={
@@ -127,11 +153,19 @@ export default function ChooseCoachScreen() {
               <Text style={styles.coachNationality}>{coach.nationality}, {coach.age} anos</Text>
               <Text style={styles.coachOverall}>Overall: <Text style={{ color: '#1976d2' }}>{coach.overall}</Text></Text>
               <Text style={styles.coachValue}>
-                Valor: <Text style={{ color: '#43a047' }}>€ {coach.value.toLocaleString()}</Text>
+                Valor: <Text style={{ color: coach.isFree ? '#FF6B6B' : '#43a047' }}>
+                  {coach.isFree ? 'GRATUITO!' : `€ ${coach.value.toLocaleString()}`}
+                </Text>
               </Text>
+              
+              {coach.isFree && (
+                <View style={styles.freeTag}>
+                  <Text style={styles.freeTagText}>GRATUITO</Text>
+                </View>
+              )}
             </View>
             
-            {coach.value > budgetRemaining && (
+            {!coach.isFree && coach.value > budgetRemaining && (
               <View style={styles.unavailableOverlay}>
                 <Text style={styles.unavailableText}>Sem orçamento</Text>
               </View>
@@ -223,6 +257,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     position: 'relative',
   },
+  freeCoachCard: {
+    backgroundColor: '#FFF8E1', // Fundo levemente amarelado para destacar
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
   selectedCoach: {
     backgroundColor: '#e3f2fd',
     borderWidth: 2,
@@ -288,5 +327,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  freeTag: {
+    position: 'absolute',
+    right: 0,
+    top: -5,
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  freeTagText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
 });

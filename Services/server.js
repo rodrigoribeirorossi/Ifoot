@@ -154,29 +154,75 @@ app.post('/api/save-coach', async (req, res) => {
   const { teamId, coachId } = req.body;
   
   try {
-    // Atualizar o time com o ID do técnico escolhido
-    await pool.query(
-      'UPDATE user_teams SET coach_id = ? WHERE id = ?',
-      [coachId, teamId]
-    );
+    const connection = await pool.getConnection();
     
-    // Obter o valor do técnico para atualizar o orçamento do time
-    const [coaches] = await pool.query('SELECT value FROM tecnicos WHERE id = ?', [coachId]);
-    
-    if (coaches.length > 0) {
-      const coachValue = coaches[0].value;
+    try {
+      await connection.beginTransaction();
       
-      // Atualizar o orçamento restante do time
-      await pool.query(
-        'UPDATE user_teams SET budget_remaining = budget_remaining - ? WHERE id = ?',
-        [coachValue, teamId]
+      // Verificar se o técnico é o técnico gratuito especial (ID 999999)
+      const isFreeCoach = coachId === 999999;
+      
+      if (isFreeCoach) {
+        // Verificar se o técnico gratuito já existe no banco de dados
+        const [existingCoach] = await connection.query(
+          'SELECT id FROM tecnicos WHERE id = ?', 
+          [coachId]
+        );
+        
+        // Se não existe, criar o técnico gratuito no banco de dados
+        if (existingCoach.length === 0) {
+          await connection.query(`
+            INSERT INTO tecnicos (id, name, nationality, age, overall, photo_url, value, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              999999, 
+              "Assistente Técnico", 
+              "Brasil", 
+              45, 
+              60, 
+              "https://cdn-icons-png.flaticon.com/512/3003/3003035.png", 
+              0, 
+              "retired"
+            ]
+          );
+        }
+      }
+      
+      // Atualizar o time com o ID do técnico escolhido
+      await connection.query(
+        'UPDATE user_teams SET coach_id = ? WHERE id = ?',
+        [coachId, teamId]
       );
+      
+      // Se não for o técnico gratuito, obter o valor e atualizar o orçamento
+      if (!isFreeCoach) {
+        const [coaches] = await connection.query(
+          'SELECT value FROM tecnicos WHERE id = ?', 
+          [coachId]
+        );
+        
+        if (coaches.length > 0) {
+          const coachValue = coaches[0].value;
+          
+          // Atualizar o orçamento restante do time
+          await connection.query(
+            'UPDATE user_teams SET budget_remaining = budget_remaining - ? WHERE id = ?',
+            [coachValue, teamId]
+          );
+        }
+      }
+      
+      await connection.commit();
+      res.json({ success: true });
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
     }
-    
-    res.json({ success: true });
   } catch (err) {
     console.error('Erro ao salvar técnico:', err);
-    res.status(500).json({ error: 'Erro ao salvar o técnico' });
+    res.status(500).json({ error: 'Erro ao salvar o técnico', message: err.message });
   }
 });
 
@@ -297,6 +343,39 @@ app.put('/api/team-players/:teamId/update-roles', async (req, res) => {
   } catch (error) {
     console.error('Erro ao atualizar papéis dos jogadores:', error);
     res.status(500).json({ message: 'Erro interno do servidor' });
+  }
+});
+
+// Adicione este novo endpoint para buscar jogadores aleatórios com overall < 80
+app.get('/api/random-players-below-80', async (req, res) => {
+  try {
+    const { count } = req.query;
+    const playerCount = parseInt(count) || 23; // 11 titulares + 12 reservas
+    
+    // Buscar jogadores com overall < 80, aleatoriamente
+    const [rows] = await pool.query(
+      'SELECT * FROM jogadores WHERE overall < 80 AND status = "retired" ORDER BY RAND() LIMIT ?',
+      [playerCount]
+    );
+    
+    // Garantir que temos pelo menos um goleiro
+    const hasGoalkeeper = rows.some(player => player.position === 'Goleiro');
+    
+    if (!hasGoalkeeper && playerCount > 1) {
+      const [goalkeepers] = await pool.query(
+        'SELECT * FROM jogadores WHERE overall < 80 AND position = "Goleiro" AND status = "retired" ORDER BY RAND() LIMIT 1'
+      );
+      
+      if (goalkeepers.length > 0) {
+        // Substituir um jogador qualquer pelo goleiro
+        rows[0] = goalkeepers[0];
+      }
+    }
+    
+    res.json(rows);
+  } catch (err) {
+    console.error('Erro ao buscar jogadores aleatórios:', err);
+    res.status(500).json({ error: 'Erro ao buscar jogadores' });
   }
 });
 

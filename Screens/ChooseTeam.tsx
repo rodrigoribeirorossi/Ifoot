@@ -28,8 +28,14 @@ const NUM_RESERVES = 12;
 export default function ChooseTeamScreen() {
   const route = useRoute();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
-  const { budget } = route.params as { budget: number };
-
+  const { budget, difficulty } = route.params as { budget: number; difficulty: string };
+  
+  // Verifica se é a dificuldade "Rataria"
+  const isRataria = difficulty === 'rataria';
+  
+  // Estado para indicar se está carregando a seleção automática
+  const [isAutoSelecting, setIsAutoSelecting] = useState(false);
+  
   // selectedType: 'titular' | 'reserva'
   const [selectedType, setSelectedType] = useState<'titular' | 'reserva' | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -168,6 +174,44 @@ export default function ChooseTeamScreen() {
     }
   };
 
+  // Função para selecionar jogadores automaticamente (apenas para Rataria)
+  const handleAutoSelect = async () => {
+    try {
+      setIsAutoSelecting(true);
+      
+      // Chamada para novo endpoint que busca jogadores aleatórios com overall < 80
+      const response = await fetch(
+        `http://localhost:3001/api/random-players-below-80?count=23` // 11 titulares + 12 reservas
+      );
+      const players = await response.json();
+      
+      if (players.length < 23) {
+        alert('Não foi possível encontrar jogadores suficientes.');
+        setIsAutoSelecting(false);
+        return;
+      }
+      
+      // Divide os jogadores em titulares e reservas
+      const titulares = players.slice(0, 11);
+      const reservas = players.slice(11, 23);
+      
+      // Atualiza os estados
+      setChosenTitular(titulares);
+      setChosenReserva(reservas);
+      setIsAutoSelecting(false);
+    } catch (error) {
+      console.error('Erro ao selecionar jogadores automáticos:', error);
+      alert('Ocorreu um erro ao selecionar jogadores automaticamente.');
+      setIsAutoSelecting(false);
+    }
+  };
+
+  // Função para abreviar nomes longos
+  const shortenName = (name: string, maxLength: number = 14) => {
+    if (name.length <= maxLength) return name;
+    return name.substring(0, maxLength - 3) + '...';
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Card de instruções */}
@@ -194,6 +238,19 @@ export default function ChooseTeamScreen() {
           <Text style={styles.budgetValue}>€ {calculateTeamValue().toLocaleString()}</Text>
         </View>
       </View>
+
+      {/* Botão de seleção automática para dificuldade Rataria */}
+      {isRataria && (
+        <TouchableOpacity 
+          style={styles.autoSelectButton}
+          onPress={handleAutoSelect}
+          disabled={isAutoSelecting}
+        >
+          <Text style={styles.autoSelectButtonText}>
+            {isAutoSelecting ? "Selecionando jogadores..." : "Selecionar Time Aleatoriamente"}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Mini campo e reservas */}
       <View style={styles.fieldRow}>
@@ -299,7 +356,7 @@ export default function ChooseTeamScreen() {
       {selectedType !== null && selectedIndex !== null && (
         <View style={styles.chooseCard}>
           <Text style={styles.chooseTitle}>
-            Escolha o jogador para a posição {selectedType === 'titular' ? selectedIndex + 1 : `Reserva ${selectedIndex + 1}`}:
+            Escolha o jogador para a posição {selectedType === 'titular' ? getPositionNameByIndex(selectedIndex) : `Reserva ${selectedIndex + 1}`}:
           </Text>
           <View style={styles.optionsRow}>
             {availablePlayers.map(player => (
@@ -315,9 +372,10 @@ export default function ChooseTeamScreen() {
                     setImageErrors(errors => ({ ...errors, [player.id]: true }))
                   }
                 />
-                <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{player.name}</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#1976d2' }}>Geral: {player.overall}</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 14, color: '#43a047' }}>Valor: € {player.value.toLocaleString()}</Text>
+                <Text style={styles.playerName}>{shortenName(player.name)}</Text>
+                <Text style={styles.playerPosition}>{player.position}</Text>
+                <Text style={styles.playerOverall}>Geral: {player.overall}</Text>
+                <Text style={styles.playerValue}>Valor: € {player.value.toLocaleString()}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -562,6 +620,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 500,
     alignSelf: 'center',
+    overflow: 'hidden', // Impede que o conteúdo transborde
   },
   chooseTitle: {
     fontWeight: 'bold',
@@ -570,15 +629,18 @@ const styles = StyleSheet.create({
   },
   optionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around', // Distribui os cards igualmente
+    flexWrap: 'wrap', // Permite quebra de linha se necessário
+    alignItems: 'stretch',
   },
   optionBox: {
     backgroundColor: '#e0e0e0',
-    padding: 16, // aumente o padding
-    borderRadius: 12, // aumente o raio
+    padding: 12,
+    borderRadius: 12,
     alignItems: 'center',
-    marginHorizontal: 8, // aumente o espaçamento
-    minWidth: 120, // aumente a largura mínima
+    marginHorizontal: 6,
+    width: '30%', // Largura fixa para evitar problemas de layout
+    maxWidth: 140,
   },
   saveButton: {
     backgroundColor: '#43a047',
@@ -593,5 +655,47 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  autoSelectButton: {
+    backgroundColor: '#FF6B6B', // Cor vermelha para destacar
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 10,
+    marginBottom: 20,
+    width: '100%',
+    maxWidth: 500,
+    alignItems: 'center',
+  },
+  autoSelectButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  playerName: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    textAlign: 'center',
+    height: 40, // Altura fixa para acomodar até 2 linhas
+  },
+  playerPosition: {
+    fontSize: 13,
+    color: '#333',
+    marginVertical: 2,
+    textAlign: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  playerOverall: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#1976d2',
+    marginTop: 2,
+  },
+  playerValue: {
+    fontWeight: 'bold',
+    fontSize: 13,
+    color: '#43a047',
   },
 });

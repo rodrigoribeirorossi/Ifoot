@@ -12,6 +12,7 @@ const difficulties = [
   { label: 'Média', value: 'media', budget: 60_000_000 },
   { label: 'Difícil', value: 'dificil', budget: 40_000_000 },
   { label: 'Muito Difícil', value: 'muito_dificil', budget: 20_000_000 },
+  { label: 'Rataria', value: 'rataria', budget: 12_000_000 },
 ];
 
 export default function NewGameScreen({ navigation }: NewGameScreenProps) {
@@ -118,7 +119,10 @@ export default function NewGameScreen({ navigation }: NewGameScreenProps) {
 
       <Button
         title="Começar"
-        onPress={() => navigation.navigate('ChooseTeam', { budget: selectedDifficulty?.budget })}
+        onPress={() => navigation.navigate('ChooseTeam', { 
+          budget: selectedDifficulty?.budget,
+          difficulty: difficulty // Passa o tipo de dificuldade
+        })}
         color="#f4511e"
       />
     </View>
