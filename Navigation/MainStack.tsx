@@ -12,20 +12,35 @@ import ChooseTeamScreen from '../Screens/ChooseTeam';
 import ChooseCoachScreen from '../Screens/ChooseCoachScreen';
 import SeasonIntroScreen from '../Screens/SeasonIntroScreen';
 import TeamManagementScreen from '../Screens/TeamManagementScreen'; // Esta será a próxima tela após as instruções
+import CalendarScreen from '../Screens/CalendarScreen';
+import CompetitionsScreen from '../Screens/CompetitionsScreen';
+import CompetitionDetailScreen from '../Screens/CompetitionDetailScreen';
+import GameCentralScreen from '../Screens/GameCentralScreen';
 
+// Atualize a definição de tipos para incluir todos os parâmetros necessários
 type RootStackParamList = {
   Home: undefined;
   NewGame: undefined;
   LoadGame: undefined;
+  ChooseTeam: { budget: number; difficulty: string };
   Teams: undefined;
   Players: undefined;
-  Match: undefined;
+  Match: { 
+    matchId: number; 
+    homeTeamId: number; 
+    awayTeamId: number; 
+    homeTeamName: string; 
+    awayTeamName: string; 
+    competitionName?: string 
+  };
   History: undefined;
-  ChooseTeam: undefined;
-  ChooseCoach: { teamId: number, budgetRemaining: number };
-  Tournament: { teamId: number };
+  ChooseCoach: { teamId: number; budgetRemaining: number };
   SeasonIntro: { teamId: number };
   TeamManagement: { teamId: number };
+  Calendar: { teamId: number; seasonId: number };
+  Competitions: { teamId: number; seasonId: number };
+  CompetitionDetail: { competitionId: number; teamId: number; competitionName?: string };
+  GameCentral: { teamId: number };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -70,6 +85,10 @@ export default function MainStack() {
         component={TeamManagementScreen} 
         options={{ title: 'Escalação e Tática' }} 
       />
+      <Stack.Screen name="Calendar" component={CalendarScreen} options={{ title: 'Calendário' }} />
+      <Stack.Screen name="Competitions" component={CompetitionsScreen} options={{ title: 'Competições' }} />
+      <Stack.Screen name="CompetitionDetail" component={CompetitionDetailScreen} options={({ route }) => ({ title: route.params.competitionName || 'Competição' })} />
+      <Stack.Screen name="GameCentral" component={GameCentralScreen} options={{ title: 'Central de Jogos' }} />
     </Stack.Navigator>
   );
 }

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 //import DraggableFlatList from 'react-native-draggable-flatlist';
 import { Dimensions, Platform } from 'react-native';
+import { NavigationProp, RootStackParamList } from '../Types/navigation';
 
+// definição de tipos
 type Player = {
   id: number;
   name: string;
@@ -32,9 +34,23 @@ type FormationType = {
 type TacticType = 'defensive' | 'balanced' | 'offensive' | 'counter' | 'possession';
 type PlayStyle = 'short_pass' | 'long_ball' | 'wings' | 'central';
 
+// Adicione esta interface no topo do arquivo, junto com os outros tipos
+interface NextMatch {
+  id: number;
+  home_team_id: number;
+  away_team_id: number;
+  home_team_name: string;
+  away_team_name: string;
+  competition_name: string;
+  match_date: string;
+  match_time: string;
+  stage: string;
+  status: string;
+}
+
 export default function TeamManagementScreen() {
   const route = useRoute();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { teamId } = route.params as { teamId: number };
   
   const [loadingData, setLoadingData] = useState(true);
@@ -42,6 +58,10 @@ export default function TeamManagementScreen() {
   const [reserves, setReserves] = useState<Player[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [teamName, setTeamName] = useState('Meu Time');
+  const [nextMatch, setNextMatch] = useState<NextMatch | null>(null);
+  const [loadingNextMatch, setLoadingNextMatch] = useState(false);
+  const [currentSeasonId, setCurrentSeasonId] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Formações disponíveis
   const formations: FormationType[] = [
@@ -227,6 +247,24 @@ export default function TeamManagementScreen() {
     fetchTeamData();
   }, [teamId]);
   
+  // Função para obter a temporada atual
+  const fetchCurrentSeason = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/teams/${teamId}/current-season`);
+      const data = await response.json();
+      if (data.seasonId) {
+        setCurrentSeasonId(data.seasonId);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar temporada atual:', error);
+    }
+  };
+
+  // Chame esta função no useEffect
+  useEffect(() => {
+    fetchCurrentSeason();
+  }, [teamId]);
+  
   const handleFormationChange = (formationValue: string) => {
     const newFormation = formations.find(f => f.value === formationValue) || formations[0];
     setCurrentFormation(newFormation);
@@ -340,27 +378,84 @@ export default function TeamManagementScreen() {
   const handleSetPenaltyTaker = (playerId: number) => {
     setPenaltyTaker(playerId);
   };
-  
-  if (loadingData) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Carregando dados do time...</Text>
-      </View>
-    );
-  }
 
+  // Função para salvar a configuração do time
+  const saveTeamConfiguration = async () => {
+    try {
+      setIsSaving(true);
+      
+      // Enviar dados do time para o servidor
+      const response = await fetch(`http://localhost:3001/api/teams/${teamId}/save-configuration`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formation: currentFormation.value,
+          tactic,
+          playStyle,
+          captain,
+          penaltyTaker,
+          freeKickTaker,
+          cornerTaker,
+          starters: starters.map(player => player.id),
+          reserves: reserves.map(player => player.id)
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        Alert.alert('Sucesso', 'Configuração do time salva com sucesso!');
+      } else {
+        Alert.alert('Erro', 'Falha ao salvar a configuração do time.');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar configuração:', error);
+      Alert.alert('Erro', 'Ocorreu um problema ao salvar a configuração.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Então substitua o botão existente por este:
   return (
     <View style={styles.container}>
       {/* Menu de navegação esquerdo */}
       <View style={styles.leftMenu}>
-        <View style={styles.menuItem}>
-          <MaterialIcons name="home" size={24} color="#fff" />
-          <Text style={styles.menuText}>Principal</Text>
-        </View>
+        {/* Novo botão Central de Jogo */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('GameCentral', { teamId })}
+        >
+          <MaterialIcons name="sports-soccer" size={24} color="#fff" />
+          <Text style={styles.menuText}>Central de Jogo</Text>
+        </TouchableOpacity>
+        
+        {/* Botão atual (Elenco) */}
         <View style={[styles.menuItem, styles.activeMenuItem]}>
           <MaterialIcons name="people" size={24} color="#fff" />
           <Text style={styles.menuText}>Elenco</Text>
         </View>
+        
+        {/* Botão de Calendário - Adicione este código */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => {
+            if (currentSeasonId) {
+              navigation.navigate('Calendar', { 
+                teamId: teamId, 
+                seasonId: currentSeasonId 
+              });
+            } else {
+              Alert.alert('Temporada não iniciada', 'Inicie uma temporada primeiro para acessar o calendário!');
+            }
+          }}
+        >
+          <MaterialIcons name="calendar-today" size={24} color="#fff" />
+          <Text style={styles.menuText}>Calendário</Text>
+        </TouchableOpacity>
+        
         <View style={styles.menuItem}>
           <MaterialIcons name="emoji-events" size={24} color="#fff" />
           <Text style={styles.menuText}>Competições</Text>
@@ -392,9 +487,15 @@ export default function TeamManagementScreen() {
         {/* Cabeçalho com nome do time e controles */}
         <View style={styles.header}>
           <Text style={styles.teamName}>{teamName}</Text>
-          <TouchableOpacity style={styles.nextMatchButton}>
-            <Text style={styles.nextMatchButtonText}>Próxima Partida</Text>
-            <MaterialIcons name="play-arrow" size={24} color="#fff" />
+          <TouchableOpacity 
+            style={styles.saveButton} 
+            onPress={saveTeamConfiguration}
+            disabled={isSaving}
+          >
+            <Text style={styles.saveButtonText}>
+              {isSaving ? 'Salvando...' : 'Salvar Equipe'}
+            </Text>
+            {!isSaving && <MaterialIcons name="save" size={18} color="#fff" style={styles.buttonIcon} />}
           </TouchableOpacity>
         </View>
         
@@ -694,17 +795,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1a237e',
   },
-  nextMatchButton: {
+  saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4caf50',
     padding: 10,
     borderRadius: 8,
   },
-  nextMatchButtonText: {
+  saveButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     marginRight: 5,
+  },
+  buttonIcon: {
+    marginLeft: 5,
   },
   
   // Controles de formação e tática
