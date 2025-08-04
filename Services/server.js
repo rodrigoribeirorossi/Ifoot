@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const { seedTeams, associateTeamsToCompetitions } = require('./seed-data');
-const { generateFixturesForAllCompetitions } = require('./generate-fixtures');
+// Importar a nova função syncTournaments
+const { fillCalendar, syncTournaments, generateBasicCalendar} = require('./simplified-calendar');
 
 const app = express();
 app.use(cors());
@@ -14,7 +15,7 @@ const pool = mysql.createPool({
   host: '127.0.0.1',
   user: 'root', // ou outro usuário criado
   password: 'AQWzsx2éàé(1', // senha definida na instalação
-  database: 'ifoot',
+  database: 'ifoot_simple',
   port: 3306,
 });
 
@@ -85,6 +86,7 @@ app.post('/api/jogadores', async (req, res) => {
   }
 });
 
+// Modificar o endpoint save-team para criar usuário automaticamente
 app.post('/api/save-team', async (req, res) => {
   const { teamName, userId, formation, players, budgetRemaining, teamValue } = req.body;
   
@@ -93,6 +95,22 @@ app.post('/api/save-team', async (req, res) => {
     await connection.beginTransaction();
     
     try {
+      // Verificar se o usuário existe, caso contrário criar
+      const [userExists] = await connection.query(
+        'SELECT id FROM users WHERE id = ?',
+        [userId]
+      );
+      
+      if (userExists.length === 0) {
+        // Criar um usuário padrão com o ID fornecido
+        await connection.query(
+          `INSERT INTO users (id, username, password, email, created_at)
+           VALUES (?, ?, ?, ?, NOW())`,
+          [userId, `user${userId}`, 'password123', `user${userId}@example.com`]
+        );
+        console.log(`Usuário ID ${userId} criado automaticamente`);
+      }
+      
       // 1. Inserir o time
       const [teamResult] = await connection.query(
         'INSERT INTO user_teams (name, user_id, formation, budget_remaining, team_value) VALUES (?, ?, ?, ?, ?)',
@@ -501,6 +519,21 @@ app.get('/api/calendar/:teamId', async (req, res) => {
   const { season_id } = req.query;
   
   try {
+    console.log(`Buscando jogos do calendário para time ${teamId}, temporada ${season_id}`);
+    
+    // Se season_id não for fornecido, buscar a temporada atual
+    let seasonIdToUse = season_id;
+    if (!seasonIdToUse) {
+      const [currentSeason] = await pool.query(
+        'SELECT id FROM seasons WHERE is_current = 1 LIMIT 1'
+      );
+      
+      if (currentSeason.length > 0) {
+        seasonIdToUse = currentSeason[0].id;
+      }
+    }
+
+    // Construir a query para buscar partidas
     let query = `
       SELECT m.*, 
         ht.name as home_team_name, at.name as away_team_name,
@@ -514,7 +547,22 @@ app.get('/api/calendar/:teamId', async (req, res) => {
       ORDER BY m.match_date, m.match_time
     `;
     
-    const [matches] = await pool.query(query, [teamId, teamId, season_id]);
+    const queryParams = [teamId, teamId];
+
+      // Adicionar filtro de temporada se disponível
+    if (seasonIdToUse) {
+      query += ' AND c.season_id = ?';
+      queryParams.push(seasonIdToUse);
+    }
+        
+    // Ordenar por data e hora
+    query += ' ORDER BY m.match_date, m.match_time';
+    console.log('Query:', query, 'Params:', queryParams);
+
+     // Executar a query
+    const [matches] = await pool.query(query, queryParams);
+    console.log(`Encontrados ${matches.length} jogos para o time ${teamId}`);
+    
     res.json(matches);
   } catch (err) {
     console.error('Erro ao buscar calendário:', err);
@@ -533,6 +581,10 @@ app.get('/api/matches/next/:teamId', async (req, res) => {
     const [teamCheck] = await pool.query('SELECT id, name FROM teams WHERE id = ?', [teamId]);
     console.log('Time encontrado:', teamCheck);
     
+    if (teamCheck.length === 0) {
+      return res.json({ error: 'Time não encontrado' });
+    }
+
     const [matches] = await pool.query(
       `SELECT m.*, 
         ht.name as home_team_name, at.name as away_team_name,
@@ -562,11 +614,17 @@ app.get('/api/matches/next/:teamId', async (req, res) => {
       );
       
       console.log(`Time participa de ${competitions.length} competições:`, competitions);
-    }
     
-    res.json(matches.length === 0 ? null : matches[0]);
-  } catch (err) {
-    console.error('Erro ao buscar próxima partida:', err);
+      return res.json({ 
+        match: null,
+        competitionsCount: competitions.length,
+        competitions: competitions
+      });
+    }
+
+    res.json(matches[0]);
+  } catch (error) {
+    console.error('Erro ao buscar próxima partida:', error);
     res.status(500).json({ error: 'Erro ao buscar próxima partida' });
   }
 });
@@ -623,6 +681,32 @@ app.get('/api/teams/:teamId/current-season', async (req, res) => {
   } catch (err) {
     console.error('Erro ao buscar temporada atual:', err);
     res.status(500).json({ error: 'Erro ao buscar temporada atual' });
+  }
+});
+
+// Endpoint para buscar competições do time
+app.get('/api/teams/:teamId/competitions', async (req, res) => {
+  const { teamId } = req.params;
+  
+  try {
+    console.log(`Buscando competições para o time ${teamId}`);
+    
+    const [competitions] = await pool.query(
+      `SELECT c.*, s.year as season_year
+       FROM competitions c
+       JOIN competition_teams ct ON c.id = ct.competition_id
+       JOIN seasons s ON c.season_id = s.id
+       WHERE ct.team_id = ?`,
+      [teamId]
+    );
+    
+    console.log(`Time participa de ${competitions.length} competições:`, 
+      competitions.map(c => c.name));
+    
+    res.json(competitions);
+  } catch (error) {
+    console.error('Erro ao buscar competições do time:', error);
+    res.status(500).json({ error: 'Erro ao buscar competições do time' });
   }
 });
 
@@ -710,43 +794,67 @@ async function createCompetitionsForSeason(connection, seasonId, year) {
 
 async function registerUserTeamInCompetitions(connection, userTeamId, seasonId) {
   try {
-    console.log(`Verificando time ${userTeamId} nas tabelas...`);
+    console.log(`Sincronizando time ID ${userTeamId} entre tabelas...`);
     
-    // Verificar se o time já existe na tabela teams
-    const [existingTeam] = await connection.query(
-      'SELECT id FROM teams WHERE id = ?',
+    // 1. Buscar dados completos do time do usuário
+    const [userTeam] = await connection.query(
+      'SELECT name, formation, budget_remaining FROM user_teams WHERE id = ?', 
       [userTeamId]
     );
     
-    // Se não existir, inserir o time na tabela teams primeiro
-    if (existingTeam.length === 0) {
-      // Buscar detalhes do time do usuário
-      const [userTeam] = await connection.query(
-        'SELECT name FROM user_teams WHERE id = ?',
-        [userTeamId]
-      );
-      
-      console.log(`Resultados da busca do time ${userTeamId}:`, userTeam);
-      
-      if (userTeam.length > 0) {
-        // Inserir o time na tabela teams
-        await connection.query(
-          'INSERT INTO teams (id, name, strength, is_user_team) VALUES (?, ?, ?, ?)',
-          [userTeamId, userTeam[0].name, 70, true]
-        );
-        console.log(`Time do usuário ${userTeam[0].name} (ID: ${userTeamId}) inserido na tabela teams.`);
-      } else {
-        throw new Error(`Time de usuário com ID ${userTeamId} não encontrado na tabela user_teams.`);
-      }
+    if (userTeam.length === 0) {
+      throw new Error(`Time com ID ${userTeamId} não encontrado na tabela user_teams`);
     }
     
-    // Buscar competições estaduais e nacionais para o primeiro ano
-    const [competitions] = await connection.query(
-      'SELECT id, type FROM competitions WHERE season_id = ? AND (type = ? OR type = ? OR type = ?)',
-      [seasonId, 'estadual', 'nacional', 'copa']
+    // 2. Verificar se o time já existe na tabela teams com o mesmo ID
+    const [existingTeamWithSameId] = await connection.query(
+      'SELECT id, name FROM teams WHERE id = ?',
+      [userTeamId]
     );
     
-    // Agora registrar o time do usuário nas competições iniciais
+    // 3. Verificar se o time já existe com outro ID mas mesmo nome
+    const [existingTeamWithSameName] = await connection.query(
+      'SELECT id, name FROM teams WHERE name = ? AND id != ? AND is_user_team = true',
+      [userTeam[0].name, userTeamId]
+    );
+    
+    // Registrar resultados para debug
+    console.log('Time na tabela user_teams:', userTeam[0]);
+    console.log('Time na tabela teams com mesmo ID:', existingTeamWithSameId[0] || 'Não encontrado');
+    console.log('Time na tabela teams com mesmo nome:', existingTeamWithSameName[0] || 'Não encontrado');
+    
+    if (existingTeamWithSameId.length > 0) {
+      // 4a. Atualizar o time existente na tabela teams
+      await connection.query(
+        'UPDATE teams SET name = ?, strength = ?, is_user_team = true WHERE id = ?',
+        [userTeam[0].name, 70, userTeamId]
+      );
+      console.log(`Time ID ${userTeamId} atualizado na tabela teams`);
+    } 
+    else if (existingTeamWithSameName.length > 0) {
+      // 4b. Time existe com outro ID - usar esse ID nas competições
+      console.log(`AVISO: Time '${userTeam[0].name}' já existe com ID ${existingTeamWithSameName[0].id}`);
+      // Opção: remover o time antigo ou usar ele
+      userTeamId = existingTeamWithSameName[0].id; // Usar o ID existente
+    }
+    else {
+      // 4c. Inserir novo time na tabela teams
+      await connection.query(
+        'INSERT INTO teams (id, name, strength, is_user_team) VALUES (?, ?, ?, ?)',
+        [userTeamId, userTeam[0].name, 70, true]
+      );
+      console.log(`Time ID ${userTeamId} inserido na tabela teams`);
+    }
+
+    // Continuar com o registro nas competições...
+    const competitionTypes = ['estadual', 'nacional', 'copa'];
+    
+    const [competitions] = await connection.query(
+      'SELECT id FROM competitions WHERE season_id = ? AND type IN (?) AND id NOT IN (SELECT competition_id FROM competition_teams WHERE team_id = ?)',
+      [seasonId, competitionTypes, userTeamId]
+    );
+    
+    // Registrar o time em cada competição
     for (const comp of competitions) {
       await connection.query(
         'INSERT INTO competition_teams (competition_id, team_id) VALUES (?, ?)',
@@ -754,7 +862,7 @@ async function registerUserTeamInCompetitions(connection, userTeamId, seasonId) 
       );
     }
   } catch (error) {
-    console.error('Erro ao registrar time nas competições:', error);
+    console.error("Erro ao registrar time nas competições:", error);
     throw error;
   }
 }
@@ -865,286 +973,233 @@ app.listen(3001, () => {
 
 // Função principal para iniciar temporada
 async function initializeFirstSeason(connection, userId, teamId) {
-  // Começar com ano 2024
-  const year = 2024;
-  
-  // 1. Criar a temporada
-  const [seasonResult] = await connection.query(
-    'INSERT INTO seasons (year, is_current, status) VALUES (?, true, ?)',
-    [year, 'active']
-  );
-  const seasonId = seasonResult.insertId;
-  
-  // 2. Criar competições da temporada
-  await createCompetitionsForSeason(connection, seasonId, year);
-  
-  // 3. Também precisamos definir essas funções ausentes:
-  await seedAndAssociateTeams(connection, seasonId);
-
-  // 3. Popular competições com times (usando seed-data.js)
-  //await populateCompetitionsWithTeams(connection, seasonId);
-  
-  // 4. Associar o time do usuário apenas às competições apropriadas para um time recém-promovido
-  await registerUserTeamInAppropriateCompetitions(connection, teamId, seasonId);
-  
-  // 5. Gerar o calendário completo
-  await generateFixturesForCompetitionsBySeason(connection, seasonId);
-  
-  return seasonId;
-}
-
-async function registerUserTeamInAppropriateCompetitions(connection, teamId, seasonId) {
-  // Verificar se o time já existe na tabela teams
-  const [existingTeam] = await connection.query(
-    'SELECT id FROM teams WHERE id = ?',
-    [teamId]
-  );
-  
-  if (existingTeam.length === 0) {
-    // Inserir o time do usuário na tabela teams
-    const [userTeam] = await connection.query('SELECT name FROM user_teams WHERE id = ?', [teamId]);
-    await connection.query(
-      'INSERT INTO teams (id, name, strength, is_user_team) VALUES (?, ?, ?, ?)',
-      [teamId, userTeam[0].name, 70, true]
-    );
-  }
-  
-  // Como time recém-promovido, participará apenas de:
-  // 1. Paulistão (estadual)
-  // 2. Brasileirão Série A (como time promovido)
-  // 3. Copa do Brasil
-  const competitionTypes = ['estadual', 'nacional', 'copa'];
-  
-  const [competitions] = await connection.query(
-    'SELECT id FROM competitions WHERE season_id = ? AND type IN (?) AND id NOT IN (SELECT competition_id FROM competition_teams WHERE team_id = ?)',
-    [seasonId, competitionTypes, teamId]
-  );
-  
-  // Registrar o time em cada competição
-  for (const comp of competitions) {
-    await connection.query(
-      'INSERT INTO competition_teams (competition_id, team_id) VALUES (?, ?)',
-      [comp.id, teamId]
-    );
-  }
-}
-
-// Adicione esta função auxiliar após initializeFirstSeason
-async function seedAndAssociateTeams(connection, seasonId) {
   try {
-    console.log("Verificando e adicionando times às competições...");
+    console.log(`Inicializando temporada para usuário ${userId}, time ${teamId}`);
     
-    // Verificar se já existem times na tabela teams
-    const [teamsCount] = await connection.query('SELECT COUNT(*) as count FROM teams');
-    
-    if (teamsCount[0].count <= 1) { // Se só tiver o time do usuário
-      console.log("Populando tabela de times...");
-      // Esta função importa do seed-data.js e não precisa de conexão
-      await seedTeams();
-    }
-    
-    // Obter todas as competições desta temporada
-    const [competitions] = await connection.query(
-      'SELECT id, type FROM competitions WHERE season_id = ?',
-      [seasonId]
+    // 1. Verificar se já existe uma temporada
+    const [existingSeason] = await connection.query(
+      'SELECT id FROM seasons WHERE year = 2024'
     );
     
-    // Para cada competição, associar os times apropriados
-    for (const comp of competitions) {
-      // Obter times apropriados para esta competição com base em seu tipo
-      let teamQuery;
-      let teamIds = [];
+    let seasonId;
+    
+    if (existingSeason.length === 0) {
+      // Se não existir, criar temporada 2024
+      const [seasonResult] = await connection.query(
+        'INSERT INTO seasons (year, is_current, status) VALUES (2024, true, "active")'
+      );
+      seasonId = seasonResult.insertId;
       
-      if (comp.type === 'estadual') {
-        // Para estadual, buscar times com IDs entre 201-215 (Paulistão)
-        teamQuery = 'SELECT id FROM teams WHERE id BETWEEN 201 AND 215 AND is_user_team = 0';
-      } else if (comp.type === 'nacional') {
-        // Para nacional, buscar times com IDs entre 101-119 (Brasileirão)
-        teamQuery = 'SELECT id FROM teams WHERE id BETWEEN 101 AND 119 AND is_user_team = 0';
-      } else if (comp.type === 'copa') {
-        // Para copa, combinar times estaduais e nacionais
-        teamQuery = 'SELECT id FROM teams WHERE (id BETWEEN 101 AND 119 OR id BETWEEN 201 AND 215) AND is_user_team = 0 LIMIT 32';
-      } else if (comp.type === 'continental') {
-        // Para continental, buscar times da Libertadores (301-320)
-        teamQuery = 'SELECT id FROM teams WHERE id BETWEEN 301 AND 320 AND is_user_team = 0';
-      } else if (comp.type === 'mundial') {
-        // Para mundial, buscar times internacionais (401-412)
-        teamQuery = 'SELECT id FROM teams WHERE id BETWEEN 401 AND 412 AND is_user_team = 0';
-      }
+      // Criar competições padrão
+      await createDefaultCompetitions(connection, seasonId);
+    } else {
+      // Se já existir, usar a temporada existente
+      seasonId = existingSeason[0].id;
       
-      // Se temos uma consulta, buscar os times
-      if (teamQuery) {
-        const [teams] = await connection.query(teamQuery);
-        teamIds = teams.map(t => t.id);
-        
-        // Associar times à competição
-        for (const teamId of teamIds) {
-          // Verificar se já está associado
-          const [existing] = await connection.query(
-            'SELECT 1 FROM competition_teams WHERE competition_id = ? AND team_id = ?',
-            [comp.id, teamId]
-          );
-          
-          if (existing.length === 0) {
-            await connection.query(
-              'INSERT INTO competition_teams (competition_id, team_id) VALUES (?, ?)',
-              [comp.id, teamId]
-            );
-          }
-        }
-        
-        console.log(`${teamIds.length} times associados à competição ${comp.id}`);
-      }
+      // Atualizar status para ativo
+      await connection.query(
+        'UPDATE seasons SET is_current = true, status = "active" WHERE id = ?',
+        [seasonId]
+      );
     }
+    
+    // 2. Sincronizar time do usuário entre as tabelas
+    await syncUserTeam(connection, teamId);
+    
+    // 3. Registrar o time do usuário nas competições
+    const [teamData] = await connection.query(
+      'SELECT name FROM user_teams WHERE id = ?',
+      [teamId]
+    );
+    
+    const teamName = teamData.length > 0 ? teamData[0].name : 'Meu Time Histórico';
+    
+    console.log(`Registrando time ${teamName} (ID: ${teamId}) nas competições`);
+    await registerUserTeamInCompetitions(connection, teamId, seasonId);
+    
+    // 4. NOVO: Gerar partidas especificamente para o time do usuário
+    console.log("Gerando partidas para o time do usuário...");
+    await generateUserTeamMatches(connection, teamId);
+    
+    return seasonId;
   } catch (error) {
-    console.error("Erro ao associar times às competições:", error);
+    console.error("Erro ao inicializar temporada:", error);
     throw error;
   }
 }
 
-async function generateFullCalendar(connection, seasonId) {
-  // 1. Obter todas as competições da temporada
-  const [competitions] = await connection.query(
-    'SELECT id, name, type, format FROM competitions WHERE season_id = ?',
-    [seasonId]
-  );
-  
-  // 2. Definir datas iniciais para cada competição (calendário realista)
-  const startDates = {
-    'estadual': new Date(2024, 0, 15),  // 15 de Janeiro
-    'nacional': new Date(2024, 3, 10),  // 10 de Abril (após estadual)
-    'copa': new Date(2024, 1, 20),      // 20 de Fevereiro
-    'continental': new Date(2024, 3, 5), // 5 de Abril
-    'mundial': new Date(2024, 11, 10)    // 10 de Dezembro
-  };
-  
-  // 3. Gerar partidas para cada competição com suas datas específicas
-  for (const competition of competitions) {
-    const teams = await getTeamsForCompetition(connection, competition.id);
+// Função para sincronizar time do usuário entre tabelas
+async function syncUserTeam(connection, teamId) {
+  try {
+    console.log(`Sincronizando time ID ${teamId} entre tabelas...`);
     
-    if (teams.length >= 2) {
-      const startDate = startDates[competition.type] || new Date();
-      
-      if (competition.format === 'league') {
-        await generateLeagueFixturesWithRealDates(connection, competition.id, teams, startDate);
-      } else if (competition.format === 'knockout') {
-        await generateKnockoutFixturesWithRealDates(connection, competition.id, teams, startDate);
-      } else if (competition.format === 'group_knockout') {
-        await generateGroupKnockoutFixturesWithRealDates(connection, competition.id, teams, startDate);
-      }
+    // Buscar informações do time na tabela user_teams
+    const [userTeam] = await connection.query(
+      'SELECT name, formation, budget_remaining FROM user_teams WHERE id = ?',
+      [teamId]
+    );
+    
+    if (userTeam.length === 0) {
+      console.log(`Time ID ${teamId} não encontrado na tabela user_teams`);
+      return false;
     }
+    
+    console.log(`Time na tabela user_teams:`, userTeam[0]);
+    
+    // Verificar se já existe na tabela teams com mesmo ID
+    const [existingTeam] = await connection.query(
+      'SELECT id, name FROM teams WHERE id = ?',
+      [teamId]
+    );
+    
+    if (existingTeam.length > 0) {
+      console.log(`Time na tabela teams com mesmo ID:`, existingTeam[0]);
+      
+      // Atualizar informações
+      await connection.query(
+        'UPDATE teams SET name = ?, is_user_team = 1 WHERE id = ?',
+        [userTeam[0].name, teamId]
+      );
+    } else {
+      // Verificar se já existe um time com o mesmo nome
+      const [existingNameTeam] = await connection.query(
+        'SELECT id, name FROM teams WHERE name = ?',
+        [userTeam[0].name]
+      );
+      
+      if (existingNameTeam.length > 0) {
+        console.log(`Time na tabela teams com mesmo nome:`, existingNameTeam[0]);
+      } else {
+        console.log(`Time na tabela teams com mesmo nome: Não encontrado`);
+      }
+      
+      // Inserir novo time na tabela teams
+      await connection.query(
+        'INSERT INTO teams (id, name, strength, is_user_team) VALUES (?, ?, ?, ?)',
+        [teamId, userTeam[0].name, 70, 1]
+      );
+    }
+    
+    console.log(`Time ID ${teamId} atualizado na tabela teams`);
+    return true;
+  } catch (error) {
+    console.error(`Erro ao sincronizar time ${teamId} entre tabelas:`, error);
+    throw error;
   }
 }
 
-// Endpoint para salvar configuração do time
-app.put('/api/teams/:teamId/save-configuration', async (req, res) => {
+async function createDefaultCompetitions(connection, seasonId) {
+  try {
+    // Competições padrão
+    const competitions = [
+      { id: 1, name: 'Paulistão A1', type: 'estadual', format: 'league' },
+      { id: 2, name: 'Brasileirão Série A', type: 'nacional', format: 'league' },
+      { id: 3, name: 'Copa do Brasil', type: 'copa', format: 'knockout' },
+      { id: 4, name: 'Copa Libertadores', type: 'continental', format: 'group_knockout' },
+      { id: 5, name: 'Mundial de Clubes', type: 'mundial', format: 'knockout' }
+    ];
+    
+    for (const comp of competitions) {
+      // Verificar se já existe
+      const [existingComp] = await connection.query(
+        'SELECT id FROM competitions WHERE id = ?',
+        [comp.id]
+      );
+      
+      if (existingComp.length === 0) {
+        await connection.query(
+          'INSERT INTO competitions (id, name, type, format, status, season_id) VALUES (?, ?, ?, ?, ?, ?)',
+          [comp.id, comp.name, comp.type, comp.format, 'active', seasonId]
+        );
+        console.log(`Competição ${comp.name} criada`);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao criar competições:", error);
+    throw error;
+  }
+}
+
+// Função para registrar time nas competições
+async function registerUserTeamInCompetitions(connection, teamId, seasonId) {
+  try {
+    // Competições padrão para registrar o time do usuário
+    const defaultCompetitions = [1, 2, 3]; // Paulistão, Brasileirão e Copa do Brasil
+    
+    for (const compId of defaultCompetitions) {
+      // Verificar se a associação já existe
+      const [existingAssoc] = await connection.query(
+        'SELECT * FROM competition_teams WHERE competition_id = ? AND team_id = ?',
+        [compId, teamId]
+      );
+      
+      if (existingAssoc.length === 0) {
+        await connection.query(
+          'INSERT INTO competition_teams (competition_id, team_id) VALUES (?, ?)',
+          [compId, teamId]
+        );
+        console.log(`Time ID ${teamId} registrado na competição ID ${compId}`);
+      } else {
+        console.log(`Time ID ${teamId} já registrado na competição ID ${compId}`);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Erro ao registrar time ${teamId} nas competições:`, error);
+    throw error;
+  }
+}
+
+// Endpoint de diagnóstico para verificar o estado do time e suas competições
+app.get('/api/diagnostics/team/:teamId', async (req, res) => {
   const { teamId } = req.params;
-  const { 
-    formation,
-    tactic,
-    playStyle, 
-    captain,
-    penaltyTaker,
-    freeKickTaker,
-    cornerTaker,
-    starters,
-    reserves
-  } = req.body;
   
   try {
-    const connection = await pool.getConnection();
+    // 1. Verificar se o time existe nas tabelas
+    const [userTeam] = await pool.query(
+      'SELECT * FROM user_teams WHERE id = ?',
+      [teamId]
+    );
     
-    try {
-      await connection.beginTransaction();
-      
-      // Atualizar dados de formação e táticas
-      await connection.query(
-        'UPDATE user_teams SET formation = ?, tactic = ?, play_style = ? WHERE id = ?',
-        [formation, tactic, playStyle, teamId]
-      );
-      
-      // Resetar papéis especiais
-      await connection.query(
-        'UPDATE user_team_players SET is_captain = 0, is_penalty_taker = 0, ' +
-        'is_freekick_taker = 0, is_corner_taker = 0 WHERE team_id = ?',
-        [teamId]
-      );
-      
-      // Definir papéis especiais
-      if (captain) {
-        await connection.query(
-          'UPDATE user_team_players SET is_captain = 1 WHERE team_id = ? AND player_id = ?',
-          [teamId, captain]
-        );
-      }
-      
-      if (penaltyTaker) {
-        await connection.query(
-          'UPDATE user_team_players SET is_penalty_taker = 1 WHERE team_id = ? AND player_id = ?',
-          [teamId, penaltyTaker]
-        );
-      }
-      
-      if (freeKickTaker) {
-        await connection.query(
-          'UPDATE user_team_players SET is_freekick_taker = 1 WHERE team_id = ? AND player_id = ?',
-          [teamId, freeKickTaker]
-        );
-      }
-      
-      if (cornerTaker) {
-        await connection.query(
-          'UPDATE user_team_players SET is_corner_taker = 1 WHERE team_id = ? AND player_id = ?',
-          [teamId, cornerTaker]
-        );
-      }
-      
-      // Atualizar titulares e reservas
-      if (starters && starters.length > 0) {
-        for (let i = 0; i < starters.length; i++) {
-          await connection.query(
-            'UPDATE user_team_players SET is_starter = 1, position = ? WHERE team_id = ? AND player_id = ?',
-            [i + 1, teamId, starters[i]]
-          );
-        }
-      }
-      
-      if (reserves && reserves.length > 0) {
-        for (let i = 0; i < reserves.length; i++) {
-          await connection.query(
-            'UPDATE user_team_players SET is_starter = 0, position = ? WHERE team_id = ? AND player_id = ?',
-            [i + 12, teamId, reserves[i]]
-          );
-        }
-      }
-      
-      // Calcular e atualizar a força do time na tabela teams
-      const overallQuery = await connection.query(
-        `SELECT AVG(j.overall) as team_strength
-         FROM user_team_players utp
-         JOIN jogadores j ON utp.player_id = j.id
-         WHERE utp.team_id = ? AND utp.is_starter = 1`,
-        [teamId]
-      );
-      
-      const teamStrength = Math.round(overallQuery[0][0].team_strength) || 70;
-      
-      // Atualizar força do time
-      await connection.query(
-        'UPDATE teams SET strength = ? WHERE id = ?',
-        [teamStrength, teamId]
-      );
-      
-      await connection.commit();
-      res.json({ success: true });
-    } catch (err) {
-      await connection.rollback();
-      res.status(500).json({ error: 'Erro ao salvar configuração do time' });
-    } finally {
-      connection.release();
-    }
-  } catch (err) {
-    console.error('Erro ao salvar configuração do time:', err);
-    res.status(500).json({ error: 'Erro ao salvar configuração do time' });
+    const [team] = await pool.query(
+      'SELECT * FROM teams WHERE id = ?',
+      [teamId]
+    );
+    
+    // 2. Verificar participação em competições
+    const [competitions] = await pool.query(
+      `SELECT c.id, c.name, c.type, c.format, c.status 
+       FROM competitions c
+       JOIN competition_teams ct ON c.id = ct.competition_id
+       WHERE ct.team_id = ?`,
+      [teamId]
+    );
+    
+    // 3. Verificar partidas agendadas
+    const [matches] = await pool.query(
+      `SELECT COUNT(*) as match_count 
+       FROM matches 
+       WHERE home_team_id = ? OR away_team_id = ?`,
+      [teamId, teamId]
+    );
+    
+    // 4. Verificar temporada atual
+    const [currentSeason] = await pool.query(
+      'SELECT * FROM seasons WHERE is_current = 1 LIMIT 1'
+    );
+    
+    res.json({
+      user_team: userTeam.length > 0 ? userTeam[0] : null,
+      team: team.length > 0 ? team[0] : null,
+      competitions: competitions,
+      match_count: matches[0].match_count,
+      current_season: currentSeason.length > 0 ? currentSeason[0] : null
+    });
+  } catch (error) {
+    console.error('Erro no diagnóstico do time:', error);
+    res.status(500).json({ error: 'Erro no diagnóstico do time' });
   }
 });

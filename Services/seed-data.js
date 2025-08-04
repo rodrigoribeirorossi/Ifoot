@@ -18,10 +18,9 @@ const brasileiraoTeams = [
   { id: 114, name: 'Fortaleza', location: 'Ceará', strength: 74, logo_url: '/assets/logos/fortaleza.png' },
   { id: 115, name: 'Red Bull Bragantino', location: 'São Paulo', strength: 73, logo_url: '/assets/logos/bragantino.png' },
   { id: 116, name: 'Fluminense', location: 'Rio de Janeiro', strength: 73, logo_url: '/assets/logos/fluminense.png' },
-  { id: 117, name: 'Cuiabá', location: 'Mato Grosso', strength: 71, logo_url: '/assets/logos/cuiaba.png' },
-  { id: 118, name: 'Atlético Goianiense', location: 'Goiás', strength: 71, logo_url: '/assets/logos/atletico-go.png' },
-  { id: 119, name: 'Juventude', location: 'Rio Grande do Sul', strength: 70, logo_url: '/assets/logos/juventude.png' },
-  { id: 120, name: 'Vitória', location: 'Bahia', strength: 70, logo_url: '/assets/logos/vitoria.png' },
+  { id: 117, name: 'Atlético Goianiense', location: 'Goiás', strength: 71, logo_url: '/assets/logos/atletico-go.png' },
+  { id: 118, name: 'Juventude', location: 'Rio Grande do Sul', strength: 70, logo_url: '/assets/logos/juventude.png' },
+  { id: 119, name: 'Vitória', location: 'Bahia', strength: 70, logo_url: '/assets/logos/vitoria.png' },
 ];
 
 // Times do Paulistão
@@ -36,7 +35,11 @@ const paulistaoTeams = [
   { id: 208, name: 'Ituano', location: 'Itu', strength: 66, logo_url: '/assets/logos/ituano.png' },
   { id: 209, name: 'Inter de Limeira', location: 'Limeira', strength: 65, logo_url: '/assets/logos/inter-limeira.png' },
   { id: 210, name: 'Santo André', location: 'Santo André', strength: 65, logo_url: '/assets/logos/santo-andre.png' },
-  // Adicionar os demais times do Paulistão que não estão no Brasileirão
+  { id: 211, name: 'Red Bull Bragantino', location: 'Bragança Paulista', strength: 75, logo_url: '/assets/logos/bragantino.png' },
+  { id: 212, name: 'São Paulo FC', location: 'São Paulo', strength: 80, logo_url: '/assets/logos/sao-paulo.png' },
+  { id: 213, name: 'Portuguesa', location: 'São Paulo', strength: 61, logo_url: '/assets/logos/portuguesa.png' },
+  { id: 214, name: 'Corinthians', location: 'São Paulo', strength: 78, logo_url: '/assets/logos/corinthians.png' },
+  { id: 215, name: 'Palmeiras', location: 'São Paulo', strength: 82, logo_url: '/assets/logos/palmeiras.png' },
 ];
 
 // Times da Libertadores (times sul-americanos)
@@ -57,6 +60,11 @@ const libertadoresTeams = [
   { id: 314, name: 'Bolívar', location: 'Bolívia', strength: 71, logo_url: '/assets/logos/bolivar.png' },
   { id: 315, name: 'Deportivo Táchira', location: 'Venezuela', strength: 69, logo_url: '/assets/logos/dep-tachira.png' },
   { id: 316, name: 'Caracas FC', location: 'Venezuela', strength: 68, logo_url: '/assets/logos/caracas-fc.png' },
+  { id: 317, name: 'Atlético Nacional', location: 'Colômbia', strength: 78, logo_url: '/assets/logos/atletico-nacional.png' },
+  { id: 318, name: 'Millonarios', location: 'Colômbia', strength: 77, logo_url: '/assets/logos/millonarios.png' },
+  { id: 319, name: 'Santa Fe', location: 'Colômbia', strength: 76, logo_url: '/assets/logos/santa-fe.png' },
+  { id: 320, name: 'Deportivo Cali', location: 'Colômbia', strength: 75, logo_url: '/assets/logos/deportivo-cali.png' },
+  
 ];
 
 // Times do Mundial (times europeus e de outros continentes)
@@ -73,6 +81,46 @@ const mundialTeams = [
   { id: 410, name: 'Al-Hilal', location: 'Arábia Saudita', strength: 77, logo_url: '/assets/logos/al-hilal.png' },
   { id: 411, name: 'Urawa Red Diamonds', location: 'Japão', strength: 74, logo_url: '/assets/logos/urawa-reds.png' },
   { id: 412, name: 'Auckland City', location: 'Nova Zelândia', strength: 70, logo_url: '/assets/logos/auckland-city.png' },
+];
+
+// Times da Série B 
+const brasileiraoBTeams = [
+  { id: 220, name: 'Ceará', location: 'Ceará', strength: 69, logo_url: '/assets/logos/ceara.png' },
+  { id: 221, name: 'Sport Recife', location: 'Pernambuco', strength: 69, logo_url: '/assets/logos/sport.png' },
+  { id: 222, name: 'América-MG', location: 'Minas Gerais', strength: 68, logo_url: '/assets/logos/america-mg.png' },
+  { id: 223, name: 'Vila Nova', location: 'Goiás', strength: 67, logo_url: '/assets/logos/vila-nova.png' },
+  { id: 224, name: 'Goiás', location: 'Goiás', strength: 67, logo_url: '/assets/logos/goias.png' },
+  { id: 225, name: 'Operário-PR', location: 'Paraná', strength: 66, logo_url: '/assets/logos/operario.png' },
+  { id: 226, name: 'Coritiba', location: 'Paraná', strength: 68, logo_url: '/assets/logos/coritiba.png' },
+  { id: 227, name: 'CRB', location: 'Alagoas', strength: 65, logo_url: '/assets/logos/crb.png' },
+  { id: 228, name: 'Avaí', location: 'Santa Catarina', strength: 66, logo_url: '/assets/logos/avai.png' },
+  { id: 229, name: 'Chapecoense', location: 'Santa Catarina', strength: 65, logo_url: '/assets/logos/chapecoense.png' },
+];
+
+// Times da Série C
+const brasileiraoCTeams = [
+  { id: 230, name: 'Paysandu', location: 'Pará', strength: 64, logo_url: '/assets/logos/paysandu.png' },
+  { id: 231, name: 'Remo', location: 'Pará', strength: 63, logo_url: '/assets/logos/remo.png' },
+  { id: 232, name: 'ABC', location: 'Rio Grande do Norte', strength: 62, logo_url: '/assets/logos/abc.png' },
+  { id: 233, name: 'Náutico', location: 'Pernambuco', strength: 62, logo_url: '/assets/logos/nautico.png' },
+  { id: 234, name: 'Figueirense', location: 'Santa Catarina', strength: 63, logo_url: '/assets/logos/figueirense.png' },
+  { id: 235, name: 'CSA', location: 'Alagoas', strength: 62, logo_url: '/assets/logos/csa.png' },
+  { id: 236, name: 'Londrina', location: 'Paraná', strength: 61, logo_url: '/assets/logos/londrina.png' },
+  { id: 237, name: 'Ferroviária', location: 'São Paulo', strength: 60, logo_url: '/assets/logos/ferroviaria.png' },
+];
+
+// Campeões estaduais e times de divisões inferiores
+const outrosTeams = [
+  { id: 240, name: 'Ferroviário-CE', location: 'Ceará', strength: 58, logo_url: '/assets/logos/ferroviario.png' },
+  { id: 241, name: 'Tombense', location: 'Minas Gerais', strength: 59, logo_url: '/assets/logos/tombense.png' },
+  { id: 242, name: 'Manaus', location: 'Amazonas', strength: 57, logo_url: '/assets/logos/manaus.png' },
+  { id: 243, name: 'Brasiliense', location: 'Distrito Federal', strength: 56, logo_url: '/assets/logos/brasiliense.png' },
+  { id: 244, name: 'Sampaio Corrêa', location: 'Maranhão', strength: 60, logo_url: '/assets/logos/sampaio-correa.png' },
+  { id: 245, name: 'São José-RS', location: 'Rio Grande do Sul', strength: 55, logo_url: '/assets/logos/sao-jose-rs.png' },
+  { id: 246, name: 'Altos-PI', location: 'Piauí', strength: 54, logo_url: '/assets/logos/altos.png' },
+  { id: 247, name: 'Juazeirense', location: 'Bahia', strength: 53, logo_url: '/assets/logos/juazeirense.png' },
+  { id: 248, name: 'Nova Iguaçu', location: 'Rio de Janeiro', strength: 55, logo_url: '/assets/logos/nova-iguacu.png' },
+  { id: 249, name: 'Real Noroeste', location: 'Espírito Santo', strength: 52, logo_url: '/assets/logos/real-noroeste.png' },
 ];
 
 // Função para inserir os times no banco de dados
@@ -94,7 +142,10 @@ async function seedTeams() {
       ...brasileiraoTeams,
       ...paulistaoTeams.filter(team => !brasileiraoTeams.some(bt => bt.name === team.name)),
       ...libertadoresTeams,
-      ...mundialTeams
+      ...mundialTeams,
+      ...brasileiraoBTeams,
+      ...brasileiraoCTeams,
+      ...outrosTeams
     ];
     
     // Inserir times na tabela teams
@@ -215,7 +266,10 @@ module.exports = {
   brasileiraoTeams,
   paulistaoTeams,
   libertadoresTeams,
-  mundialTeams
+  mundialTeams,
+  brasileiraoBTeams,
+  brasileiraoCTeams,
+  outrosTeams
 };
 
 // Se executado diretamente (não importado)

@@ -121,7 +121,11 @@ export default function NewGameScreen({ navigation }: NewGameScreenProps) {
         title="Começar"
         onPress={() => navigation.navigate('ChooseTeam', { 
           budget: selectedDifficulty?.budget,
-          difficulty: difficulty // Passa o tipo de dificuldade
+          difficulty: difficulty, // Passa o tipo de dificuldade
+          teamName: teamName,
+          stadiumName: stadiumName,
+          color1: color1,
+          color2: color2
         })}
         color="#f4511e"
       />
