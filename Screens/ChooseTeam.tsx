@@ -1,7 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+// Função para formatar valores em formato abreviado (M para milhões, K para milhares)
+const formatCurrency = (value: number): string => {
+  if (!value && value !== 0) return "0";
+  
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1).replace(/\.0$/, '')} M`;
+  } else if (value >= 1000) {
+    return `${(value / 1000).toFixed(0)} K`;
+  } else {
+    return value.toString();
+  }
+};
+
+type RouteParams = {
+  budget: number;
+  difficulty: string;
+  teamName?: string;
+  stadiumName: string;
+  color1: string;
+  color2: string;
+};
 
 const TITULAR_POSITIONS = [
   // Goleiro
@@ -28,7 +50,14 @@ const NUM_RESERVES = 12;
 export default function ChooseTeamScreen() {
   const route = useRoute();
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
-  const { budget, difficulty } = route.params as { budget: number; difficulty: string };
+  const { 
+    budget, 
+    difficulty, 
+    teamName = "Meu Time Histórico",
+    stadiumName = "Estádio Nacional",
+    color1 = "#0000ff",
+    color2 = "#ffffff"
+  } = route.params as RouteParams;
   
   // Verifica se é a dificuldade "Rataria"
   const isRataria = difficulty === 'rataria';
@@ -140,21 +169,35 @@ export default function ChooseTeamScreen() {
 
   const handleSaveTeam = async () => {
     try {
+      // Obter jogadores selecionados e orçamento restante
+      const selectedPlayers = getSelectedPlayers().map(player => player.id);
+      const remainingBudget = calculateRemainingBudget();
+      const teamValue = calculateTeamValue();
+      
+      console.log("Salvando time com dados:", {
+        teamName,
+        stadiumName,
+        color1,
+        color2,
+        teamValue,
+        remainingBudget
+      });
+      
       const response = await fetch('http://localhost:3001/api/save-team', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          teamName: "Meu Time Histórico", // Você pode adicionar um input para o nome
-          userId: 1, // Usar um sistema de autenticação para obter o ID do usuário
-          formation: "4-4-2", // Você pode adicionar seleção de formação
-          players: [
-            ...chosenTitular.map(player => player),
-            ...chosenReserva.map(player => player)
-          ],
-          budgetRemaining: calculateRemainingBudget(),
-          teamValue: calculateTeamValue()
+          teamName: teamName,
+          stadiumName: stadiumName,
+          color1: color1,
+          color2: color2,
+          userId: 1,
+          formation: "4-4-2",
+          players: selectedPlayers,
+          budgetRemaining: remainingBudget,
+          teamValue: teamValue,
         }),
       });
       
@@ -179,7 +222,6 @@ export default function ChooseTeamScreen() {
     try {
       setIsAutoSelecting(true);
       
-      // Chamada para novo endpoint que busca jogadores aleatórios com overall < 80
       const response = await fetch(
         `http://localhost:3001/api/random-players-below-80?count=23` // 11 titulares + 12 reservas
       );
@@ -195,10 +237,41 @@ export default function ChooseTeamScreen() {
       const titulares = players.slice(0, 11);
       const reservas = players.slice(11, 23);
       
+      // Verificar se os valores estão presentes
+      const allPlayersHaveValues = [...titulares, ...reservas].every(player => 
+        typeof player.value === 'number' && player.value >= 0
+      );
+      
+      if (!allPlayersHaveValues) {
+        console.warn("Alguns jogadores não têm valores definidos corretamente!");
+        // Atribuir valores baseados no overall para jogadores sem valor
+        titulares.forEach((player: any) => {
+          if (!player.value) player.value = player.overall * 50000;
+        });
+        reservas.forEach((player: any) => {
+          if (!player.value) player.value = player.overall * 50000;
+        });
+      }
+      
       // Atualiza os estados
       setChosenTitular(titulares);
       setChosenReserva(reservas);
-      setIsAutoSelecting(false);
+      
+      // Calcular valores para mostrar no log
+      const titularValue = titulares.reduce((sum: number, player: any) => sum + (player.value || 0), 0);
+      const reservaValue = reservas.reduce((sum: number, player: any) => sum + (player.value || 0), 0);
+      const totalValue = titularValue + reservaValue;
+      const newRemainingBudget = budget - totalValue;
+      
+      console.log("Valor total do elenco:", totalValue);
+      console.log("Saldo em caixa:", newRemainingBudget);
+      
+      // IMPORTANTE: Forçar uma atualização da interface
+      setTimeout(() => {
+        setIsAutoSelecting(false);
+        // Forçar re-renderização com uma pequena mudança de estado
+        setChosenTitular([...titulares]); 
+      }, 300);
     } catch (error) {
       console.error('Erro ao selecionar jogadores automáticos:', error);
       alert('Ocorreu um erro ao selecionar jogadores automaticamente.');
@@ -212,7 +285,27 @@ export default function ChooseTeamScreen() {
     return name.substring(0, maxLength - 3) + '...';
   };
 
-  return (
+  // Função para obter a lista completa de jogadores selecionados
+  const getSelectedPlayers = () => {
+    // Filtra e combina titulares e reservas, removendo posições vazias (null)
+    const titulares = chosenTitular.filter(player => player !== null);
+    const reservas = chosenReserva.filter(player => player !== null);
+    return [...titulares, ...reservas];
+  };
+
+  // Adicione este useMemo para recalcular sempre que necessário
+  const teamValue = useMemo(() => {
+    const titularValue = chosenTitular.reduce((sum, player) => sum + (player?.value || 0), 0);
+    const reservaValue = chosenReserva.reduce((sum, player) => sum + (player?.value || 0), 0);
+    return titularValue + reservaValue;
+  }, [chosenTitular, chosenReserva]);
+
+  // E este useMemo para o orçamento restante
+  const remainingBudget = useMemo(() => {
+    return budget - teamValue;
+  }, [budget, teamValue]);
+
+ return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Card de instruções */}
       <View style={styles.card}>
@@ -229,7 +322,12 @@ export default function ChooseTeamScreen() {
         {/* Card do Caixa */}
         <View style={styles.budgetCard}>
           <Text style={styles.budgetText}>💰 Caixa disponível:</Text>
-          <Text style={styles.budgetValue}>€ {calculateRemainingBudget().toLocaleString()}</Text>
+          <Text style={[
+            styles.budgetValue, 
+            calculateRemainingBudget() < 0 ? styles.negativeValue : {}
+          ]}>
+            € {calculateRemainingBudget().toLocaleString()}
+          </Text>
         </View>
 
         {/* Card do Valor do Elenco */}
@@ -375,7 +473,7 @@ export default function ChooseTeamScreen() {
                 <Text style={styles.playerName}>{shortenName(player.name)}</Text>
                 <Text style={styles.playerPosition}>{player.position}</Text>
                 <Text style={styles.playerOverall}>Geral: {player.overall}</Text>
-                <Text style={styles.playerValue}>Valor: € {player.value.toLocaleString()}</Text>
+                <Text style={styles.playerValue}>Valor: € {formatCurrency(player.value || 0)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -697,5 +795,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 13,
     color: '#43a047',
+  },
+  negativeValue: {
+    color: '#e53935', // Vermelho para valores negativos
+    fontWeight: 'bold',
   },
 });

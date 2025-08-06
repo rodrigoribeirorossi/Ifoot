@@ -18,11 +18,11 @@ type Player = {
   isInjured: boolean;
   isSuspended: boolean;
   // Adicione estas propriedades que vêm do servidor
-  isStarter?: boolean;
-  isCaptain?: boolean;
-  isPenaltyTaker?: boolean;
-  isFreekickTaker?: boolean;
-  isCornerTaker?: boolean;
+  isStarter?: number;
+  isCaptain?: number;
+  isPenaltyTaker?: number;
+  isFreekickTaker?: number
+  isCornerTaker?: number;
 };
 
 type FormationType = {
@@ -47,6 +47,17 @@ interface NextMatch {
   stage: string;
   status: string;
 }
+
+
+const testAlert = () => {
+  console.log("Testando Alert...");
+  Alert.alert(
+    'Teste',
+    'Este é um teste do Alert',
+    [{ text: 'OK', onPress: () => console.log('OK Pressed') }],
+    { cancelable: false }
+  );
+};
 
 export default function TeamManagementScreen() {
   const route = useRoute();
@@ -121,7 +132,7 @@ export default function TeamManagementScreen() {
     
   const [currentFormation, setCurrentFormation] = useState(formations[0]);
   const [tactic, setTactic] = useState<TacticType>('balanced');
-  const [playStyle, setPlayStyle] = useState<PlayStyle>('short_pass');
+  const [play_style, setPlayStyle] = useState<PlayStyle>('short_pass');
   const [captain, setCaptain] = useState<number | null>(null);
   const [penaltyTaker, setPenaltyTaker] = useState<number | null>(null);
   const [freeKickTaker, setFreeKickTaker] = useState<number | null>(null);
@@ -142,65 +153,55 @@ export default function TeamManagementScreen() {
         const teamData = await teamResponse.json();
         setTeamName(teamData.name || 'Lendas FC');
         
+        console.log(`Carregando jogadores para o time ID: ${teamId}`);
+        
         // Obter jogadores do time
         const playersResponse = await fetch(`http://localhost:3001/api/team-players/${teamId}`);
+        if (!playersResponse.ok) {
+          throw new Error(`Falha ao buscar jogadores: ${playersResponse.status}`);
+        }
+        
         const playersData = await playersResponse.json();
+        console.log(`Jogadores carregados: ${playersData.length}`);
         
         if (playersData && playersData.length > 0) {
+          // Verificar os dados do primeiro jogador para debug
+          console.log("Primeiro jogador carregado:", playersData[0]);
+          
           // Separar titulares e reservas
           const titulares = playersData
-            .filter((player: Player) => player.isStarter)
+            .filter((player: Player) => player.isStarter === 1) // Use === 1 em vez de === true
             .slice(0, 11);
           
           const suplentes = playersData
-            .filter((player: Player) => !player.isStarter)
+            .filter((player: Player) => player.isStarter === 0) // Use === 0 em vez de === false
             .slice(0, 12);
           
-          setStarters(titulares);
-          setReserves(suplentes);
+          console.log(`Titulares: ${titulares.length}, Reservas: ${suplentes.length}`);
           
-          // Definir capitão e outros papéis baseados nos dados carregados
-          const captain = playersData.find((player: Player) => player.isCaptain);
-          if (captain) setCaptain(captain.id);
-          
-          const penaltyTaker = playersData.find((player: Player) => player.isPenaltyTaker);
-          if (penaltyTaker) setPenaltyTaker(penaltyTaker.id);
-          
-          const freeKickTaker = playersData.find((player: Player) => player.isFreekickTaker);
-          if (freeKickTaker) setFreeKickTaker(freeKickTaker.id);
-          
-          const cornerTaker = playersData.find((player: Player) => player.isCornerTaker);
-          if (cornerTaker) setCornerTaker(cornerTaker.id);
+          if (titulares.length > 0) {
+            setStarters(titulares);
+            setReserves(suplentes);
+            
+            // Definir capitão e outros papéis baseados nos dados carregados
+            const captain = playersData.find((player: Player) => player.isCaptain === 1);
+            if (captain) setCaptain(captain.id);
+            
+            const penaltyTaker = playersData.find((player: Player) => player.isPenaltyTaker === 1);
+            if (penaltyTaker) setPenaltyTaker(penaltyTaker.id);
+            
+            const freeKickTaker = playersData.find((player: Player) => player.isFreekickTaker === 1);
+            if (freeKickTaker) setFreeKickTaker(freeKickTaker.id);
+            
+            const cornerTaker = playersData.find((player: Player) => player.isCornerTaker === 1);
+            if (cornerTaker) setCornerTaker(cornerTaker.id);
+          } else {
+            console.warn("Nenhum titular encontrado, usando dados simulados.");
+            useFallbackData();
+          }
         } else {
-          // Se não houver jogadores carregados, use dados simulados como fallback
-          const mockStarters = Array(11).fill(null).map((_, index) => ({
-            id: index + 1,
-            name: `Jogador ${index + 1}`,
-            position: getPositionFromIndex(index),
-            overall: Math.floor(Math.random() * 15) + 75,
-            photo_url: 'https://example.com/default-player.png',
-            energy: Math.floor(Math.random() * 30) + 70,
-            isInjured: false,
-            isSuspended: false,
-          }));
-          
-          const mockReserves = Array(12).fill(null).map((_, index) => ({
-            id: index + 12,
-            name: `Reserva ${index + 1}`,
-            position: getPositionFromIndex(Math.floor(Math.random() * 11)),
-            overall: Math.floor(Math.random() * 10) + 70,
-            photo_url: 'https://example.com/default-player.png',
-            energy: Math.floor(Math.random() * 30) + 70,
-            isInjured: index === 3,
-            isSuspended: index === 5,
-          }));
-          
-          setStarters(mockStarters);
-          setReserves(mockReserves);
-          setCaptain(1);
-          setPenaltyTaker(10);
-          setFreeKickTaker(8);
-          setCornerTaker(6);
+          console.warn("Nenhum jogador retornado da API, usando dados simulados.");
+          useFallbackData();
         }
         
         setLoadingData(false);
@@ -378,11 +379,17 @@ export default function TeamManagementScreen() {
   const handleSetPenaltyTaker = (playerId: number) => {
     setPenaltyTaker(playerId);
   };
-
+  
   // Função para salvar a configuração do time
   const saveTeamConfiguration = async () => {
     try {
       setIsSaving(true);
+
+      console.log("Enviando configuração:", {
+        formation: currentFormation.value,
+        tactic,
+        play_style,
+      });
       
       // Enviar dados do time para o servidor
       const response = await fetch(`http://localhost:3001/api/teams/${teamId}/save-configuration`, {
@@ -393,10 +400,10 @@ export default function TeamManagementScreen() {
         body: JSON.stringify({
           formation: currentFormation.value,
           tactic,
-          playStyle,
+          play_style: play_style,
           captain,
           penaltyTaker,
-          freeKickTaker,
+          freeKickTaker: freeKickTaker,
           cornerTaker,
           starters: starters.map(player => player.id),
           reserves: reserves.map(player => player.id)
@@ -406,8 +413,32 @@ export default function TeamManagementScreen() {
       const result = await response.json();
       
       if (result.success) {
-        Alert.alert('Sucesso', 'Configuração do time salva com sucesso!');
+        console.log("Configuração salva com sucesso, mostrando alerta...");
+        
+        // Use setTimeout para garantir que o Alert seja chamado após o estado ser atualizado
+        setTimeout(() => {
+          Alert.alert(
+            'Sucesso',
+            'Configuração do time salva com sucesso! Deseja ir para a Central de Jogo para iniciar a próxima partida?',
+            [
+              {
+                text: 'Ficar aqui',
+                style: 'cancel',
+                onPress: () => console.log('Usuário escolheu ficar na tela atual')
+              },
+              {
+                text: 'Ir para Central de Jogo',
+                onPress: () => {
+                  console.log('Navegando para Central de Jogo...');
+                  navigation.navigate('GameCentral', { teamId });
+                }
+              },
+            ],
+            { cancelable: false }
+          );
+        }, 100);
       } else {
+        console.log("Erro ao salvar configuração:", result);
         Alert.alert('Erro', 'Falha ao salvar a configuração do time.');
       }
     } catch (error) {
@@ -545,7 +576,7 @@ export default function TeamManagementScreen() {
             <Text style={styles.controlLabel}>Estilo:</Text>
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={playStyle}
+                selectedValue={play_style}
                 style={styles.picker}
                 onValueChange={(value) => setPlayStyle(value as PlayStyle)}
               >

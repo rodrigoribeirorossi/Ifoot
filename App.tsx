@@ -4,7 +4,6 @@ import MainStack from './Navigation/MainStack';
 import * as Font from 'expo-font';
 import { View, Text } from 'react-native';
 import 'react-native-get-random-values';
-// Adicione estas importações
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';

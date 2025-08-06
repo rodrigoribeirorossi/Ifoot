@@ -22,7 +22,7 @@ type RootStackParamList = {
   Home: undefined;
   NewGame: undefined;
   LoadGame: undefined;
-  ChooseTeam: { budget: number; difficulty: string };
+  ChooseTeam: { budget: number; difficulty: string; teamName?: string };
   Teams: undefined;
   Players: undefined;
   Match: { 

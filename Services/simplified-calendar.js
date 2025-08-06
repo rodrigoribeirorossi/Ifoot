@@ -170,105 +170,124 @@ async function generateUserTeamMatches(connection, userTeamId) {
   try {
     console.log(`Gerando partidas para o time do usuário ID ${userTeamId}`);
     
-    // 1. Buscar todas as competições que o time do usuário participa
-    const [competitions] = await connection.query(
-      `SELECT c.id, c.name, c.type 
-       FROM competitions c
-       JOIN competition_teams ct ON c.id = ct.competition_id
-       WHERE ct.team_id = ?`,
-      [userTeamId]
+    // 1. Buscar a temporada atual
+    const [seasons] = await connection.query(
+      'SELECT id FROM seasons WHERE is_current = true ORDER BY id DESC LIMIT 1'
     );
     
-    console.log(`Time participa de ${competitions.length} competições:`, competitions);
-    
-    if (competitions.length === 0) {
-      console.log("Nenhuma competição encontrada para o time.");
+    if (seasons.length === 0) {
+      console.error("Nenhuma temporada atual encontrada");
       return false;
     }
     
-    // 2. Para cada competição, gerar jogos contra outros times
+    const seasonId = seasons[0].id;
+    console.log(`Temporada atual: ID ${seasonId}`);
+    
+    // 2. Buscar todas as competições da temporada atual
+    const [competitions] = await connection.query(
+      'SELECT id, name FROM competitions WHERE season_id = ?',
+      [seasonId]
+    );
+    
+    if (competitions.length === 0) {
+      console.error(`Nenhuma competição encontrada para a temporada ${seasonId}`);
+      return false;
+    }
+    
+    console.log(`Encontradas ${competitions.length} competições na temporada ${seasonId}`);
+    
+    // 3. Para cada competição, verificar se o time está registrado
+    let partidas = 0;
     for (const comp of competitions) {
-      // 2.1 Buscar outros times da competição (exceto o time do usuário)
+      // Verificar se o time está na competição
+      const [teamRegistration] = await connection.query(
+        'SELECT * FROM competition_teams WHERE competition_id = ? AND team_id = ?',
+        [comp.id, userTeamId]
+      );
+      
+      if (teamRegistration.length === 0) {
+        console.log(`Time ${userTeamId} não está registrado na competição ${comp.name}, registrando agora...`);
+        
+        // Registrar o time na competição
+        await connection.query(
+          'INSERT INTO competition_teams (competition_id, team_id) VALUES (?, ?)',
+          [comp.id, userTeamId]
+        );
+      }
+      
+      console.log(`Gerando partidas para o time ${userTeamId} na competição ${comp.name}`);
+      
+      // 4. Buscar outros times nesta competição
       const [otherTeams] = await connection.query(
         `SELECT t.id, t.name
          FROM teams t
          JOIN competition_teams ct ON t.id = ct.team_id
-         WHERE ct.competition_id = ? AND t.id != ?`,
+         WHERE ct.competition_id = ? AND t.id != ? AND t.is_user_team = false
+         LIMIT 10`,
         [comp.id, userTeamId]
       );
       
       if (otherTeams.length === 0) {
-        console.log(`Nenhum outro time encontrado na competição ${comp.name}`);
-        continue;
+        console.warn(`Não há outros times na competição ${comp.name}`);
+        
+        // Buscar alguns times aleatórios e adicioná-los à competição
+        const [randomTeams] = await connection.query(
+          'SELECT id, name FROM teams WHERE is_user_team = false LIMIT 10'
+        );
+        
+        for (const team of randomTeams) {
+          await connection.query(
+            'INSERT INTO competition_teams (competition_id, team_id) VALUES (?, ?)',
+            [comp.id, team.id]
+          );
+          console.log(`Adicionado time ${team.name} à competição ${comp.name}`);
+        }
+        
+        // Usar esses times
+        otherTeams.push(...randomTeams);
       }
       
-      console.log(`Gerando partidas contra ${otherTeams.length} times na competição ${comp.name}`);
+      // 5. Gerar partidas contra cada time
+      const year = 2024;
+      let month = 1; // Janeiro
       
-      // 2.2 Definir datas base para os jogos
-      const currentDate = new Date();
-      const year = currentDate.getFullYear() + 1; // Próximo ano
-      let startMonth = 0; // Janeiro
-      
-      // Ajustar mês inicial baseado no tipo de competição
-      if (comp.type === 'nacional') {
-        startMonth = 3; // Abril
-      } else if (comp.type === 'continental') {
-        startMonth = 1; // Fevereiro
-      } else if (comp.type === 'copa') {
-        startMonth = 2; // Março
-      }
-      
-      // 2.3 Criar partidas de ida e volta
-      const matchValues = [];
-      
-      otherTeams.forEach((team, index) => {
-        // Jogo de ida (visitante)
-        const awayMatchDate = new Date(year, startMonth, 7 + (index * 2));
-        const formattedAwayDate = awayMatchDate.toISOString().split('T')[0];
+      for (let i = 0; i < otherTeams.length; i++) {
+        const team = otherTeams[i];
         
-        matchValues.push([
-          comp.id,             // competition_id
-          comp.id,             // tournament_id
-          team.id,             // home_team_id
-          userTeamId,          // away_team_id
-          formattedAwayDate,   // match_date
-          '19:30:00',          // match_time
-          'Fase Regular',      // stage
-          'scheduled'          // status
-        ]);
+        // Partida em casa
+        const homeDate = new Date(year, month + i, 10 + i);
+        const formattedHomeDate = homeDate.toISOString().split('T')[0];
         
-        // Jogo de volta (casa) - 2 meses depois
-        const homeMatchDate = new Date(year, startMonth + 2, 7 + (index * 2));
-        const formattedHomeDate = homeMatchDate.toISOString().split('T')[0];
-        
-        matchValues.push([
-          comp.id,             // competition_id
-          comp.id,             // tournament_id
-          userTeamId,          // home_team_id
-          team.id,             // away_team_id
-          formattedHomeDate,   // match_date
-          '19:30:00',          // match_time
-          'Fase Regular',      // stage
-          'scheduled'          // status
-        ]);
-      });
-      
-      // 2.4 Inserir as partidas no banco
-      if (matchValues.length > 0) {
         await connection.query(
           `INSERT INTO matches 
            (competition_id, tournament_id, home_team_id, away_team_id, 
-            match_date, match_time, stage, status) 
-           VALUES ?`,
-          [matchValues]
+            match_date, match_time, stage, status, season_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [comp.id, comp.id, userTeamId, team.id, formattedHomeDate, '19:30:00', 
+           'Fase Regular', 'scheduled', seasonId]
         );
-        console.log(`${matchValues.length} partidas geradas para o time ${userTeamId} na competição ${comp.name}`);
+        
+        // Partida fora
+        const awayDate = new Date(year, month + i + 3, 10 + i);
+        const formattedAwayDate = awayDate.toISOString().split('T')[0];
+        
+        await connection.query(
+          `INSERT INTO matches 
+           (competition_id, tournament_id, home_team_id, away_team_id, 
+            match_date, match_time, stage, status, season_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [comp.id, comp.id, team.id, userTeamId, formattedAwayDate, '19:30:00', 
+           'Fase Regular', 'scheduled', seasonId]
+        );
+        
+        partidas += 2;
       }
     }
     
+    console.log(`Total de ${partidas} partidas geradas com sucesso para o time ${userTeamId}`);
     return true;
   } catch (error) {
-    console.error(`Erro ao gerar partidas para o time ${userTeamId}:`, error);
+    console.error(`Erro ao gerar partidas: ${error.message}`);
     throw error;
   }
 }

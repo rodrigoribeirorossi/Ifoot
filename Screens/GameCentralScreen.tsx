@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { NavigationProp, RootStackParamList } from '../Types/navigation';
 import { NextMatch } from '../Types/models'; 
 
@@ -18,26 +17,44 @@ export default function GameCentralScreen() {
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   
   useEffect(() => {
-    checkActiveSeason();
-    fetchNextMatch();
+    const checkForActiveSeasonAndPrompt = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/api/teams/${teamId}/current-season`);
+        const data = await response.json();
+        
+        if (data.seasonId) {
+          setCurrentSeasonId(data.seasonId);
+          setHasActiveSeason(true);
+          fetchNextMatch();
+        } else {
+          // Se não existe temporada, perguntar ao usuário se quer iniciar uma
+          setTimeout(() => {
+            Alert.alert(
+              'Início de Temporada',
+              'Para jogar, você precisa iniciar uma nova temporada. Deseja iniciar agora?',
+              [
+                {
+                  text: 'Sim',
+                  onPress: () => startSeason()
+                },
+                {
+                  text: 'Não',
+                  style: 'cancel',
+                  onPress: () => console.log('Usuário optou por não iniciar temporada')
+                }
+              ],
+              { cancelable: false }
+            );
+          }, 500);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar temporada ativa:', error);
+      }
+    };
+    
+    checkForActiveSeasonAndPrompt();
     fetchRecentMatches();
   }, [teamId]);
-  
-  const checkActiveSeason = async () => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/teams/${teamId}/current-season`);
-      const data = await response.json();
-      
-      if (data.seasonId) {
-        setCurrentSeasonId(data.seasonId);
-        setHasActiveSeason(true);
-      } else {
-        setHasActiveSeason(false);
-      }
-    } catch (error) {
-      console.error('Erro ao verificar temporada ativa:', error);
-    }
-  };
   
   const fetchNextMatch = async () => {
     try {
@@ -108,14 +125,33 @@ export default function GameCentralScreen() {
     });
   };
   
+  // Melhore a navegação para calendário:
   const viewCalendar = () => {
+    if (!hasActiveSeason) {
+      Alert.alert(
+        'Temporada Necessária',
+        'Você precisa iniciar uma temporada para ver o calendário.',
+        [
+          {
+            text: 'Iniciar Temporada',
+            onPress: () => startSeason()
+          },
+          {
+            text: 'Cancelar',
+            style: 'cancel'
+          }
+        ]
+      );
+      return;
+    }
+    
     if (currentSeasonId) {
       navigation.navigate('Calendar', { 
         teamId, 
         seasonId: currentSeasonId 
       });
     } else {
-      Alert.alert('Sem temporada ativa', 'Inicie uma temporada para ver o calendário');
+      Alert.alert('Erro', 'Não foi possível encontrar a temporada atual.');
     }
   };
   
