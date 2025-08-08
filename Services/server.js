@@ -3,7 +3,9 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const { seedTeams, associateTeamsToCompetitions } = require('./seed-data');
 const { generateUserTeamMatches} = require('./simplified-calendar');
-
+const { initializeFixedSeason } = require('./initialize-fixed-season');
+const fs = require('fs').promises;
+const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -1215,49 +1217,31 @@ app.listen(3001, () => {
   console.log('API rodando em http://localhost:3001');
 });
 
+
+
 // Função principal para iniciar temporada
-async function initializeFirstSeason(connection, userId, teamId) {
+async function initializeFirstSeason(connection, year = 2024, userTeamId) {
   try {
-    // 1. Buscar informações do time
-    const [teamData] = await connection.query(
-      'SELECT name FROM user_teams WHERE id = ?',
-      [teamId]
+    // Primeiro, buscar o nome do time
+    const [userTeamResult] = await connection.query(
+      'SELECT name FROM user_teams WHERE id = ?', 
+      [userTeamId]
     );
     
-    if (teamData.length === 0) {
-      throw new Error(`Time com ID ${teamId} não encontrado`);
+    if (userTeamResult.length === 0) {
+      throw new Error(`Time com ID ${userTeamId} não encontrado`);
     }
     
-    const teamName = teamData[0].name;
-    console.log(`Criando nova temporada para time: ${teamName} (ID: ${teamId})`);
+    const userTeamName = userTeamResult[0].name;
     
-    // 2. Limpar dados de temporadas anteriores (sem acessar tabelas inexistentes)
-    await cleanupExistingData(connection, teamId);
-    console.log(`Dados de temporadas anteriores limpos para o time ${teamName}`); 
-
-    // 3. Criar nova temporada
-    const [result] = await connection.query(
-      'INSERT INTO seasons (year, is_current, status) VALUES (?, true, "active")',
-      [2024]// Ano fixo em 2024 em vez de new Date().getFullYear()
-    );
-    const seasonId = result.insertId;
-    console.log(`Nova temporada criada com ID: ${seasonId}`);
+    console.log(`Criando nova temporada para time: ${userTeamName} (ID: ${userTeamId})`);
     
-    // 4. Criar competições para esta temporada
-    await createDefaultCompetitions(connection, seasonId);
-    console.log(`Competições criadas para a temporada ID: ${seasonId}`);
+    // Substituir cleanupExistingTeamData por cleanupExistingData
+    await cleanupExistingData(connection, userTeamId);
+    console.log(`Dados de temporadas anteriores limpos para o time ${userTeamName}`);
     
-    // 5. Garantir que o time exista na tabela teams
-    await syncUserTeam(connection, teamId, teamName);
-    console.log(`Time ${teamName} (ID: ${teamId}) sincronizado com a tabela teams`);
-    
-    // 6. Registrar time nas competições
-    console.log(`Registrando time ${teamName} (ID: ${teamId}) nas competições`);
-    await registerUserTeamInCompetitions(connection, teamId, seasonId);
-    
-    // 7. Gerar partidas para este time com datas corretas
-    console.log("Gerando partidas para o time do usuário...");
-    await generateUserTeamMatches(connection, teamId);
+    // Inicializar temporada com dados fixos
+    const seasonId = await initializeFixedSeason(connection, userTeamId);
     
     return seasonId;
   } catch (error) {
@@ -1481,3 +1465,223 @@ async function cleanupExistingData(connection, teamId) {
     return false;
   }
 }
+
+// Adicionar no final do arquivo, antes do app.listen
+
+// Verificar qualificação para a Libertadores
+async function checkLibertadoresQualification(teamId, seasonId) {
+  try {
+    const connection = await pool.getConnection();
+    
+    try {
+      // Buscar ID do Brasileirão desta temporada
+      const [brasileirao] = await connection.query(
+        'SELECT id FROM competitions WHERE season_id = ? AND name = "Brasileirão Série A"',
+        [seasonId]
+      );
+      
+      // Buscar ID da Copa do Brasil desta temporada
+      const [copaDoBrasil] = await connection.query(
+        'SELECT id FROM competitions WHERE season_id = ? AND name = "Copa do Brasil"',
+        [seasonId]
+      );
+      
+      if (brasileirao.length === 0 || copaDoBrasil.length === 0) {
+        return false;
+      }
+      
+      const brasileiraoId = brasileirao[0].id;
+      const copaDoBrasilId = copaDoBrasil[0].id;
+      
+      // Verificar posição no Brasileirão
+      const [standings] = await connection.query(
+        'SELECT position FROM standings WHERE competition_id = ? AND team_id = ?',
+        [brasileiraoId, teamId]
+      );
+      
+      // Verificar se foi campeão da Copa do Brasil
+      const [champion] = await connection.query(
+        'SELECT is_champion FROM season_results WHERE competition_id = ? AND team_id = ?',
+        [copaDoBrasilId, teamId]
+      );
+      
+      // Qualifica-se se:
+      // 1. Ficou entre os 6 primeiros no Brasileirão, ou
+      // 2. Foi campeão da Copa do Brasil
+      const qualified = 
+        (standings.length > 0 && standings[0].position <= 6) ||
+        (champion.length > 0 && champion[0].is_champion);
+      
+      // Registrar resultado da qualificação
+      await connection.query(
+        'INSERT INTO season_results (season_id, team_id, competition_id, position, is_champion) VALUES (?, ?, ?, ?, ?)',
+        [seasonId, teamId, brasileiraoId, standings.length > 0 ? standings[0].position : null, false]
+      );
+      
+      return qualified;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Erro ao verificar qualificação para Libertadores:', error);
+    return false;
+  }
+}
+
+// Iniciar temporada subsequente
+app.post('/api/seasons/start-next', async (req, res) => {
+  try {
+    const { team_id, current_season_id } = req.body;
+    
+    if (!team_id || !current_season_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'IDs do time e temporada atual são obrigatórios' 
+      });
+    }
+    
+    // Buscar informações da temporada atual
+    const [currentSeason] = await pool.query(
+      'SELECT year FROM seasons WHERE id = ?',
+      [current_season_id]
+    );
+    
+    if (currentSeason.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Temporada atual não encontrada'
+      });
+    }
+    
+    // Verificar se o time se qualificou para a Libertadores
+    const qualifiedForLibertadores = await checkLibertadoresQualification(team_id, current_season_id);
+    
+    // Calcular ano da próxima temporada
+    const nextYear = currentSeason[0].year + 1;
+    
+    const connection = await pool.getConnection();
+    
+    try {
+      // Desativar temporada atual
+      await connection.query(
+        'UPDATE seasons SET is_current = false WHERE id = ?',
+        [current_season_id]
+      );
+      
+      // Criar nova temporada
+      const [newSeason] = await connection.query(
+        'INSERT INTO seasons (year, name, is_current) VALUES (?, ?, true)',
+        [nextYear, `Temporada ${nextYear}`]
+      );
+      
+      const newSeasonId = newSeason.insertId;
+      
+      // Criar competições padrão (Paulistão, Brasileirão, Copa do Brasil)
+      const defaultCompetitions = [
+        { name: 'Paulistão A1', type: 'estadual', format: 'group_knockout' },
+        { name: 'Brasileirão Série A', type: 'nacional', format: 'league' },
+        { name: 'Copa do Brasil', type: 'copa', format: 'knockout' }
+      ];
+      
+      // Adicionar Libertadores se qualificado
+      if (qualifiedForLibertadores) {
+        defaultCompetitions.push({
+          name: 'Copa Libertadores', 
+          type: 'continental', 
+          format: 'group_knockout'
+        });
+      }
+      
+      // Criar competições
+      for (const comp of defaultCompetitions) {
+        const [result] = await connection.query(
+          'INSERT INTO competitions (name, type, format, season_id, status) VALUES (?, ?, ?, ?, ?)',
+          [comp.name, comp.type, comp.format, newSeasonId, 'active']
+        );
+        
+        // Registrar time na competição
+        await connection.query(
+          'INSERT INTO competition_teams (competition_id, team_id) VALUES (?, ?)',
+          [result.insertId, team_id]
+        );
+      }
+      
+      res.json({
+        success: true,
+        seasonId: newSeasonId,
+        year: nextYear,
+        qualified_for_libertadores: qualifiedForLibertadores
+      });
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Erro ao iniciar próxima temporada:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao iniciar próxima temporada'
+    });
+  }
+});
+
+// Finalizar temporada atual
+app.post('/api/seasons/finish', async (req, res) => {
+  try {
+    const { team_id } = req.body;
+    
+    if (!team_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID do time é obrigatório'
+      });
+    }
+    
+    // Buscar temporada atual
+    const [currentSeason] = await pool.query(
+      'SELECT id FROM seasons WHERE is_current = true'
+    );
+    
+    if (currentSeason.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Não há temporada ativa'
+      });
+    }
+    
+    const seasonId = currentSeason[0].id;
+    
+    // Verificar se todos os jogos da temporada foram disputados
+    const [pendingMatches] = await pool.query(
+      `SELECT COUNT(*) as pending_count 
+       FROM matches m
+       JOIN competitions c ON m.competition_id = c.id
+       WHERE c.season_id = ? 
+       AND (m.home_team_id = ? OR m.away_team_id = ?)
+       AND m.status = 'scheduled'`,
+      [seasonId, team_id, team_id]
+    );
+    
+    if (pendingMatches[0].pending_count > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Ainda existem ${pendingMatches[0].pending_count} partidas pendentes nesta temporada`
+      });
+    }
+    
+    // Verificar qualificação para a Libertadores
+    const qualifiedForLibertadores = await checkLibertadoresQualification(team_id, seasonId);
+    
+    res.json({
+      success: true,
+      message: 'Temporada finalizada com sucesso',
+      qualified_for_libertadores: qualifiedForLibertadores,
+      season_id: seasonId
+    });
+  } catch (error) {
+    console.error('Erro ao finalizar temporada:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro ao finalizar temporada'
+    });
+  }
+});

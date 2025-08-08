@@ -1,0 +1,875 @@
+{
+  "seasonInfo": {
+    "year": 2024,
+    "name": "Temporada 2024"
+  },
+  "competitions": [
+    {
+      "id": 1,
+      "name": "Paulistão A1",
+      "type": "estadual",
+      "format": "group_knockout",
+      "status": "active",
+      "description": "Campeonato Paulista Série A1 2024",
+      "startDate": "2024-01-21",
+      "endDate": "2024-03-31",
+      "groups": [
+        {
+          "name": "A",
+          "teams": [
+            "USER_TEAM",
+            "Corinthians",
+            "Inter de Limeira",
+            "Botafogo-SP"
+          ]
+        },
+        {
+          "name": "B",
+          "teams": [
+            "Palmeiras",
+            "Ponte Preta",
+            "Água Santa",
+            "Guarani"
+          ]
+        },
+        {
+          "name": "C",
+          "teams": [
+            "São Paulo",
+            "Mirassol",
+            "São Bernardo",
+            "Ituano"
+          ]
+        },
+        {
+          "name": "D",
+          "teams": [
+            "Santos",
+            "Red Bull Bragantino",
+            "Novorizontino",
+            "Portuguesa"
+          ]
+        }
+      ],
+      "teams": [
+        {
+          "name": "USER_TEAM",
+          "isUserTeam": true,
+          "group": "A"
+        },
+        {
+          "name": "Corinthians",
+          "isUserTeam": false,
+          "group": "A"
+        },
+        {
+          "name": "Inter de Limeira",
+          "isUserTeam": false,
+          "group": "A"
+        },
+        {
+          "name": "Botafogo-SP",
+          "isUserTeam": false,
+          "group": "A"
+        },
+        {
+          "name": "Palmeiras",
+          "isUserTeam": false,
+          "group": "B"
+        },
+        {
+          "name": "Ponte Preta",
+          "isUserTeam": false,
+          "group": "B"
+        },
+        {
+          "name": "Água Santa",
+          "isUserTeam": false,
+          "group": "B"
+        },
+        {
+          "name": "Guarani",
+          "isUserTeam": false,
+          "group": "B"
+        },
+        {
+          "name": "São Paulo",
+          "isUserTeam": false,
+          "group": "C"
+        },
+        {
+          "name": "Mirassol",
+          "isUserTeam": false,
+          "group": "C"
+        },
+        {
+          "name": "São Bernardo",
+          "isUserTeam": false,
+          "group": "C"
+        },
+        {
+          "name": "Ituano",
+          "isUserTeam": false,
+          "group": "C"
+        },
+        {
+          "name": "Santos",
+          "isUserTeam": false,
+          "group": "D"
+        },
+        {
+          "name": "Red Bull Bragantino",
+          "isUserTeam": false,
+          "group": "D"
+        },
+        {
+          "name": "Novorizontino",
+          "isUserTeam": false,
+          "group": "D"
+        },
+        {
+          "name": "Portuguesa",
+          "isUserTeam": false,
+          "group": "D"
+        }
+      ],
+      "phases": [
+        {
+          "name": "Fase de Grupos",
+          "type": "group",
+          "description": "Cada time joga contra todos do mesmo grupo em turno e returno"
+        },
+        {
+          "name": "Quartas de Final",
+          "type": "knockout",
+          "description": "Confrontos entre os dois primeiros de cada grupo"
+        },
+        {
+          "name": "Semifinal",
+          "type": "knockout",
+          "description": "Vencedores das quartas de final"
+        },
+        {
+          "name": "Final",
+          "type": "knockout",
+          "description": "Vencedores das semifinais"
+        }
+      ],
+      "matches": [
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Corinthians",
+          "date": "2024-01-21",
+          "time": "19:00:00",
+          "stage": "Fase de Grupos",
+          "round": "1ª Rodada",
+          "group": "A",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Inter de Limeira",
+          "date": "2024-01-28",
+          "time": "19:00:00",
+          "stage": "Fase de Grupos",
+          "round": "2ª Rodada",
+          "group": "A",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Botafogo-SP",
+          "date": "2024-02-04",
+          "time": "19:00:00",
+          "stage": "Fase de Grupos",
+          "round": "3ª Rodada",
+          "group": "A",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Corinthians",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-02-11",
+          "time": "19:00:00",
+          "stage": "Fase de Grupos",
+          "round": "4ª Rodada",
+          "group": "A",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Inter de Limeira",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-02-18",
+          "time": "19:00:00",
+          "stage": "Fase de Grupos",
+          "round": "5ª Rodada",
+          "group": "A",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Botafogo-SP",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-02-25",
+          "time": "19:00:00",
+          "stage": "Fase de Grupos",
+          "round": "6ª Rodada",
+          "group": "A",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "TBD_QUARTAS",
+          "date": "2024-03-13",
+          "time": "21:30:00",
+          "stage": "Quartas de Final",
+          "round": "Jogo Único",
+          "status": "scheduled",
+          "conditions": {
+            "depends_on": "group_position",
+            "rule": "O adversário será o 2º colocado do Grupo C se o USER_TEAM for 1º do Grupo A, ou o 1º do Grupo C se for 2º do Grupo A"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Brasileirão Série A",
+      "type": "nacional",
+      "format": "league",
+      "status": "active",
+      "description": "Campeonato Brasileiro Série A 2024",
+      "startDate": "2024-04-14",
+      "endDate": "2024-12-08",
+      "teams": [
+        {
+          "name": "USER_TEAM",
+          "isUserTeam": true
+        },
+        {
+          "name": "Athletico-PR",
+          "isUserTeam": false
+        },
+        {
+          "name": "Atlético-GO",
+          "isUserTeam": false
+        },
+        {
+          "name": "Atlético-MG",
+          "isUserTeam": false
+        },
+        {
+          "name": "Bahia",
+          "isUserTeam": false
+        },
+        {
+          "name": "Botafogo",
+          "isUserTeam": false
+        },
+        {
+          "name": "Corinthians",
+          "isUserTeam": false
+        },
+        {
+          "name": "Criciúma",
+          "isUserTeam": false
+        },
+        {
+          "name": "Cruzeiro",
+          "isUserTeam": false
+        },
+        {
+          "name": "Cuiabá",
+          "isUserTeam": false
+        },
+        {
+          "name": "Flamengo",
+          "isUserTeam": false
+        },
+        {
+          "name": "Fluminense",
+          "isUserTeam": false
+        },
+        {
+          "name": "Fortaleza",
+          "isUserTeam": false
+        },
+        {
+          "name": "Grêmio",
+          "isUserTeam": false
+        },
+        {
+          "name": "Internacional",
+          "isUserTeam": false
+        },
+        {
+          "name": "Juventude",
+          "isUserTeam": false
+        },
+        {
+          "name": "Palmeiras",
+          "isUserTeam": false
+        },
+        {
+          "name": "Red Bull Bragantino",
+          "isUserTeam": false
+        },
+        {
+          "name": "São Paulo",
+          "isUserTeam": false
+        },
+        {
+          "name": "Vasco",
+          "isUserTeam": false
+        }
+      ],
+      "phases": [
+        {
+          "name": "Fase Única",
+          "type": "league",
+          "description": "Todos contra todos em turno e returno"
+        }
+      ],
+      "matches": [
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Athletico-PR",
+          "date": "2024-04-14",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "1ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Atlético-GO",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-04-21",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "2ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Atlético-MG",
+          "date": "2024-04-28",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "3ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Bahia",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-05-05",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "4ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Botafogo",
+          "date": "2024-05-12",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "5ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Corinthians",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-05-19",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "6ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Criciúma",
+          "date": "2024-05-26",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "7ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Cruzeiro",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-06-02",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "8ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Cuiabá",
+          "date": "2024-06-12",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "9ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Flamengo",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-06-16",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "10ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Fluminense",
+          "date": "2024-06-23",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "11ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Fortaleza",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-06-30",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "12ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Grêmio",
+          "date": "2024-07-03",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "13ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Internacional",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-07-10",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "14ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Juventude",
+          "date": "2024-07-17",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "15ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Palmeiras",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-07-21",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "16ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Red Bull Bragantino",
+          "date": "2024-07-28",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "17ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "São Paulo",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-08-04",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "18ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Vasco",
+          "date": "2024-08-11",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "19ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Athletico-PR",
+          "date": "2024-08-18",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "20ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Atlético-GO",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-08-25",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "21ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Atlético-MG",
+          "date": "2024-09-01",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "22ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Bahia",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-09-15",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "23ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Botafogo",
+          "date": "2024-09-22",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "24ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Corinthians",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-09-29",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "25ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Criciúma",
+          "date": "2024-10-06",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "26ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Cruzeiro",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-10-20",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "27ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Cuiabá",
+          "date": "2024-10-27",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "28ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Flamengo",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-11-03",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "29ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Fluminense",
+          "date": "2024-11-10",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "30ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Fortaleza",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-11-17",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "31ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Grêmio",
+          "date": "2024-11-20",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "32ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Internacional",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-11-24",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "33ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Juventude",
+          "date": "2024-11-27",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "34ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Palmeiras",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-12-01",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "35ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Red Bull Bragantino",
+          "date": "2024-12-04",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "36ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "São Paulo",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-12-08",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "37ª Rodada",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Vasco",
+          "date": "2024-12-08",
+          "time": "16:00:00",
+          "stage": "Fase Única",
+          "round": "38ª Rodada",
+          "status": "scheduled"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Copa do Brasil",
+      "type": "copa",
+      "format": "knockout",
+      "status": "active",
+      "description": "Copa do Brasil 2024",
+      "startDate": "2024-02-21",
+      "endDate": "2024-11-10",
+      "teams": [
+        {
+          "name": "USER_TEAM",
+          "isUserTeam": true
+        },
+        {
+          "name": "Flamengo",
+          "isUserTeam": false
+        },
+        {
+          "name": "São Paulo",
+          "isUserTeam": false
+        },
+        {
+          "name": "Palmeiras",
+          "isUserTeam": false
+        },
+        {
+          "name": "Atlético-MG",
+          "isUserTeam": false
+        },
+        {
+          "name": "Fluminense",
+          "isUserTeam": false
+        },
+        {
+          "name": "Corinthians",
+          "isUserTeam": false
+        },
+        {
+          "name": "Grêmio",
+          "isUserTeam": false
+        },
+        {
+          "name": "Athletico-PR",
+          "isUserTeam": false
+        },
+        {
+          "name": "Fortaleza",
+          "isUserTeam": false
+        },
+        {
+          "name": "Internacional",
+          "isUserTeam": false
+        },
+        {
+          "name": "Cruzeiro",
+          "isUserTeam": false
+        },
+        {
+          "name": "Bahia",
+          "isUserTeam": false
+        },
+        {
+          "name": "Botafogo",
+          "isUserTeam": false
+        },
+        {
+          "name": "Vasco",
+          "isUserTeam": false
+        },
+        {
+          "name": "Red Bull Bragantino",
+          "isUserTeam": false
+        }
+      ],
+      "phases": [
+        {
+          "name": "Terceira Fase",
+          "type": "knockout",
+          "description": "32 times, jogos de ida e volta"
+        },
+        {
+          "name": "Oitavas de Final",
+          "type": "knockout",
+          "description": "16 times, jogos de ida e volta"
+        },
+        {
+          "name": "Quartas de Final",
+          "type": "knockout",
+          "description": "8 times, jogos de ida e volta"
+        },
+        {
+          "name": "Semifinal",
+          "type": "knockout",
+          "description": "4 times, jogos de ida e volta"
+        },
+        {
+          "name": "Final",
+          "type": "knockout",
+          "description": "2 times, jogos de ida e volta"
+        }
+      ],
+      "matches": [
+        {
+          "homeTeam": "USER_TEAM",
+          "awayTeam": "Vasco",
+          "date": "2024-05-01",
+          "time": "19:30:00",
+          "stage": "Terceira Fase",
+          "round": "Ida",
+          "status": "scheduled"
+        },
+        {
+          "homeTeam": "Vasco",
+          "awayTeam": "USER_TEAM",
+          "date": "2024-05-22",
+          "time": "19:30:00",
+          "stage": "Terceira Fase",
+          "round": "Volta",
+          "status": "scheduled"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Copa Libertadores",
+      "type": "continental",
+      "format": "group_knockout",
+      "status": "active",
+      "description": "Copa Libertadores da América 2024",
+      "startDate": "2024-04-03",
+      "endDate": "2024-11-30",
+      "groups": [
+        {
+          "name": "E",
+          "teams": [
+            "Flamengo",
+            "Bolívar",
+            "Palestino",
+            "Talleres"
+          ]
+        }
+      ],
+      "teams": [
+        {
+          "name": "Flamengo",
+          "isUserTeam": false,
+          "group": "E"
+        },
+        {
+          "name": "Bolívar",
+          "isUserTeam": false,
+          "group": "E"
+        },
+        {
+          "name": "Palestino",
+          "isUserTeam": false,
+          "group": "E"
+        },
+        {
+          "name": "Talleres",
+          "isUserTeam": false,
+          "group": "E"
+        },
+        {
+          "name": "Palmeiras",
+          "isUserTeam": false,
+          "group": "F"
+        },
+        {
+          "name": "Botafogo",
+          "isUserTeam": false,
+          "group": "D"
+        },
+        {
+          "name": "São Paulo",
+          "isUserTeam": false,
+          "group": "B"
+        },
+        {
+          "name": "Atlético-MG",
+          "isUserTeam": false,
+          "group": "G"
+        },
+        {
+          "name": "Fluminense",
+          "isUserTeam": false,
+          "group": "A"
+        },
+        {
+          "name": "Grêmio",
+          "isUserTeam": false,
+          "group": "C"
+        }
+      ],
+      "matches": []
+    }
+  ]
+}
