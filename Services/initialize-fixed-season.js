@@ -27,7 +27,7 @@ async function initializeFixedSeason(connection, userTeamId) {
 
     // 2. Criar a temporada
     const [seasonResult] = await connection.query(
-      'INSERT INTO seasons (year, is_current) VALUES (?, ?, ?)',
+      'INSERT INTO seasons (year, is_current) VALUES (?, ?)',
       [seasonData.seasonInfo.year, true]
     );
     

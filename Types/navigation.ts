@@ -1,3 +1,4 @@
+
 // Crie este arquivo com todas as definições de navegação
 export type RootStackParamList = {
   Home: undefined;
@@ -18,9 +19,9 @@ export type RootStackParamList = {
   ChooseCoach: { teamId: number; budgetRemaining: number };
   SeasonIntro: { teamId: number };
   TeamManagement: { teamId: number };
-  Calendar: { teamId: number; seasonId: number };
-  Competitions: { teamId: number; seasonId: number };
-  CompetitionDetail: { competitionId: number; teamId: number; competitionName?: string };
+  Calendar: { teamId: number; seasonId: number; hasActiveSeason: boolean };
+  Competitions: { teamId: number; seasonId: number; hasActiveSeason: boolean };
+  CompetitionDetail: { competitionId: number; teamId: number; competitionName?: string; hasActiveSeason: boolean };
   GameCentral: { teamId: number };
 };
 

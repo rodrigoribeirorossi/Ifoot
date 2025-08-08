@@ -37,8 +37,8 @@ type RootStackParamList = {
   ChooseCoach: { teamId: number; budgetRemaining: number };
   SeasonIntro: { teamId: number };
   TeamManagement: { teamId: number };
-  Calendar: { teamId: number; seasonId: number };
-  Competitions: { teamId: number; seasonId: number };
+  Calendar: { teamId: number; seasonId: number | null; hasActiveSeason?: boolean };
+  Competitions: { teamId: number; seasonId: number | null; hasActiveSeason?: boolean };
   CompetitionDetail: { competitionId: number; teamId: number; competitionName?: string };
   GameCentral: { teamId: number };
 };
@@ -85,8 +85,16 @@ export default function MainStack() {
         component={TeamManagementScreen} 
         options={{ title: 'Escalação e Tática' }} 
       />
-      <Stack.Screen name="Calendar" component={CalendarScreen} options={{ title: 'Calendário' }} />
-      <Stack.Screen name="Competitions" component={CompetitionsScreen} options={{ title: 'Competições' }} />
+      <Stack.Screen 
+        name="Calendar" 
+        component={CalendarScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="Competitions" 
+        component={CompetitionsScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen name="CompetitionDetail" component={CompetitionDetailScreen} options={({ route }) => ({ title: route.params.competitionName || 'Competição' })} />
       <Stack.Screen name="GameCentral" component={GameCentralScreen} options={{ title: 'Central de Jogos' }} />
     </Stack.Navigator>

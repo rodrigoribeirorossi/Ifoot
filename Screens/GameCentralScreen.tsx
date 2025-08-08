@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { NavigationProp, RootStackParamList } from '../Types/navigation';
 import { NextMatch } from '../Types/models'; 
+import { MaterialIcons, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+
+
+  // Adicione esta interface para definir os tipos dos parâmetros
+  interface SidebarMenuProps {
+    navigation: NavigationProp;
+    teamId: number;
+    currentSeasonId: number | null;
+    hasActiveSeason: boolean;
+    startSeason: () => Promise<void>;
+  }
 
 export default function GameCentralScreen() {
   const route = useRoute();
@@ -15,8 +25,8 @@ export default function GameCentralScreen() {
   const [currentSeasonId, setCurrentSeasonId] = useState<number | null>(null);
   const [hasActiveSeason, setHasActiveSeason] = useState(false);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
-  
-  useEffect(() => {
+
+   useEffect(() => {
     const checkForActiveSeasonAndPrompt = async () => {
       try {
         const response = await fetch(`http://localhost:3001/api/teams/${teamId}/current-season`);
@@ -148,7 +158,8 @@ export default function GameCentralScreen() {
     if (currentSeasonId) {
       navigation.navigate('Calendar', { 
         teamId, 
-        seasonId: currentSeasonId 
+        seasonId: currentSeasonId,
+        hasActiveSeason: currentSeasonId !== null
       });
     } else {
       Alert.alert('Erro', 'Não foi possível encontrar a temporada atual.');
@@ -160,113 +171,229 @@ export default function GameCentralScreen() {
     return date.toLocaleDateString('pt-BR');
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Central de Jogo</Text>
+  function SidebarMenu({ navigation, teamId, currentSeasonId, hasActiveSeason, startSeason }: SidebarMenuProps) {
+    // Função para navegar para o Calendário
+    const navigateToCalendar = () => {
+      if (!hasActiveSeason) {
+        Alert.alert(
+          'Temporada Necessária',
+          'Você precisa iniciar uma temporada para ver o calendário.',
+          [
+            {
+              text: 'Iniciar Temporada',
+              onPress: () => startSeason()
+            },
+            {
+              text: 'Cancelar',
+              style: 'cancel'
+            }
+          ]
+        );
+      } else if (currentSeasonId) {
+        navigation.navigate('Calendar', { teamId, seasonId: currentSeasonId, hasActiveSeason });
+      }
+    };
+  
+    // Função para navegar para Competições
+    const navigateToCompetitions = () => {
+      if (!hasActiveSeason) {
+        Alert.alert(
+          'Temporada Necessária',
+          'Você precisa iniciar uma temporada para ver as competições.',
+          [
+            {
+              text: 'Iniciar Temporada',
+              onPress: () => startSeason()
+            },
+            {
+              text: 'Cancelar',
+              style: 'cancel'
+            }
+          ]
+        );
+      } else if (currentSeasonId) {
+        navigation.navigate('Competitions', { teamId, seasonId: currentSeasonId, hasActiveSeason });
+      }
+    };
+  
+    return (
+      <View style={styles.leftMenu}>
+        <TouchableOpacity 
+          style={[styles.menuItem, styles.activeMenuItem]}
+          onPress={() => {}} // Já está na tela atual
+        >
+          <MaterialIcons name="sports-soccer" size={24} color="#fff" />
+          <Text style={styles.menuText}>Central de Jogo</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('TeamManagement', { teamId })}
+        >
+          <MaterialIcons name="people" size={24} color="#fff" />
+          <Text style={styles.menuText}>Elenco</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={navigateToCalendar}
+        >
+          <MaterialIcons name="calendar-today" size={24} color="#fff" />
+          <Text style={styles.menuText}>Calendário</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={navigateToCompetitions}
+        >
+          <MaterialIcons name="emoji-events" size={24} color="#fff" />
+          <Text style={styles.menuText}>Competições</Text>
+        </TouchableOpacity>
+  
+        <TouchableOpacity style={styles.menuItem}>
+          <FontAwesome5 name="exchange-alt" size={24} color="#fff" />
+          <Text style={styles.menuText}>Transferências</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <MaterialIcons name="bar-chart" size={24} color="#fff" />
+          <Text style={styles.menuText}>Estatísticas</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <MaterialIcons name="fitness-center" size={24} color="#fff" />
+          <Text style={styles.menuText}>Treinamento</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <MaterialCommunityIcons name="finance" size={24} color="#fff" />
+          <Text style={styles.menuText}>Finanças</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <Ionicons name="settings-outline" size={24} color="#fff" />
+          <Text style={styles.menuText}>Configurações</Text>
+        </TouchableOpacity>
       </View>
-      
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1976d2" />
-          <Text style={styles.loadingText}>Carregando...</Text>
+    );
+  }
+  
+  return (
+    <View style={styles.mainContainer}>
+      <SidebarMenu 
+        navigation={navigation} 
+        teamId={teamId} 
+        currentSeasonId={currentSeasonId}
+        hasActiveSeason={hasActiveSeason}
+        startSeason={startSeason}
+      />
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Central de Jogo</Text>
         </View>
-      ) : (
-        <>
-          {/* Seção de Status da Temporada */}
-          <View style={styles.seasonStatus}>
-            {hasActiveSeason ? (
-              <Text style={styles.statusText}>Temporada 2024 em andamento</Text>
-            ) : (
-              <View style={styles.noSeasonContainer}>
-                <Text style={styles.noSeasonText}>Nenhuma temporada ativa</Text>
-                <TouchableOpacity 
-                  style={styles.startSeasonButton} 
-                  onPress={startSeason}
-                >
-                  <Text style={styles.startSeasonButtonText}>Iniciar Temporada 2024</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+        
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1976d2" />
+            <Text style={styles.loadingText}>Carregando...</Text>
           </View>
-          
-          {/* Próxima Partida */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Próxima Partida</Text>
-            {nextMatch ? (
-              <View style={styles.matchCard}>
-                <Text style={styles.matchDate}>
-                  {formatDate(nextMatch.match_date)} • {nextMatch.competition_name}
-                </Text>
-                <View style={styles.teamsContainer}>
-                  <Text style={styles.teamName}>{nextMatch.home_team_name}</Text>
-                  <Text style={styles.vsText}>vs</Text>
-                  <Text style={styles.teamName}>{nextMatch.away_team_name}</Text>
+        ) : (
+          <>
+            {/* Seção de Status da Temporada */}
+            <View style={styles.seasonStatus}>
+              {hasActiveSeason ? (
+                <Text style={styles.statusText}>Temporada 2024 em andamento</Text>
+              ) : (
+                <View style={styles.noSeasonContainer}>
+                  <Text style={styles.noSeasonText}>Nenhuma temporada ativa</Text>
+                  <TouchableOpacity 
+                    style={styles.startSeasonButton} 
+                    onPress={startSeason}
+                  >
+                    <Text style={styles.startSeasonButtonText}>Iniciar Temporada 2024</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity 
-                  style={styles.playMatchButton} 
-                  onPress={goToMatch}
-                >
-                  <MaterialIcons name="sports-soccer" size={18} color="#fff" />
-                  <Text style={styles.buttonText}>Jogar Partida</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.noMatchesText}>
-                {hasActiveSeason 
-                  ? "Não há partidas agendadas" 
-                  : "Inicie uma temporada para ver suas partidas"}
-              </Text>
-            )}
-          </View>
-          
-          {/* Ações rápidas */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity 
-              style={styles.actionButton} 
-              onPress={viewCalendar}
-              disabled={!hasActiveSeason}
-            >
-              <MaterialIcons name="calendar-today" size={24} color="#1976d2" />
-              <Text style={styles.actionButtonText}>Ver Calendário</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => {
-                // Verificar se o seasonId existe antes de navegar
-                if (currentSeasonId) {
-                  navigation.navigate('Competitions', { teamId, seasonId: currentSeasonId });
-                } else {
-                  Alert.alert('Temporada não iniciada', 'Inicie uma temporada para acessar as competições');
-                }
-              }}
-              disabled={!hasActiveSeason}
-            >
-              <MaterialIcons name="emoji-events" size={24} color="#1976d2" />
-              <Text style={styles.actionButtonText}>Competições</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {/* Resultados Recentes */}
-          {recentMatches.length > 0 && (
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Resultados Recentes</Text>
-              {recentMatches.map((match) => (
-                <View key={match.id} style={styles.recentMatchCard}>
-                  <Text style={styles.recentMatchDate}>{formatDate(match.match_date)}</Text>
-                  <View style={styles.recentMatchContent}>
-                    <Text style={styles.recentTeamName}>{match.home_team_name}</Text>
-                    <Text style={styles.recentScore}>{match.home_score} - {match.away_score}</Text>
-                    <Text style={styles.recentTeamName}>{match.away_team_name}</Text>
-                  </View>
-                </View>
-              ))}
+              )}
             </View>
-          )}
-        </>
-      )}
-    </ScrollView>
+            
+            {/* Próxima Partida */}
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>Próxima Partida</Text>
+              {nextMatch ? (
+                <View style={styles.matchCard}>
+                  <Text style={styles.matchDate}>
+                    {formatDate(nextMatch.match_date)} • {nextMatch.competition_name}
+                  </Text>
+                  <View style={styles.teamsContainer}>
+                    <Text style={styles.teamName}>{nextMatch.home_team_name}</Text>
+                    <Text style={styles.vsText}>vs</Text>
+                    <Text style={styles.teamName}>{nextMatch.away_team_name}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.playMatchButton} 
+                    onPress={goToMatch}
+                  >
+                    <MaterialIcons name="sports-soccer" size={18} color="#fff" />
+                    <Text style={styles.buttonText}>Jogar Partida</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={styles.noMatchesText}>
+                  {hasActiveSeason 
+                    ? "Não há partidas agendadas" 
+                    : "Inicie uma temporada para ver suas partidas"}
+                </Text>
+              )}
+            </View>
+            
+            {/* Ações rápidas */}
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={viewCalendar}
+                disabled={!hasActiveSeason}
+              >
+                <MaterialIcons name="calendar-today" size={24} color="#1976d2" />
+                <Text style={styles.actionButtonText}>Ver Calendário</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => {
+                  // Verificar se o seasonId existe antes de navegar
+                  if (currentSeasonId) {
+                    navigation.navigate('Competitions', { teamId, seasonId: currentSeasonId, hasActiveSeason });
+                  } else {
+                    Alert.alert('Temporada não iniciada', 'Inicie uma temporada para acessar as competições');
+                  }
+                }}
+                disabled={!hasActiveSeason}
+              >
+                <MaterialIcons name="emoji-events" size={24} color="#1976d2" />
+                <Text style={styles.actionButtonText}>Competições</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Resultados Recentes */}
+            {recentMatches.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <Text style={styles.sectionTitle}>Resultados Recentes</Text>
+                {recentMatches.map((match) => (
+                  <View key={match.id} style={styles.recentMatchCard}>
+                    <Text style={styles.recentMatchDate}>{formatDate(match.match_date)}</Text>
+                    <View style={styles.recentMatchContent}>
+                      <Text style={styles.recentTeamName}>{match.home_team_name}</Text>
+                      <Text style={styles.recentScore}>{match.home_score} - {match.away_score}</Text>
+                      <Text style={styles.recentTeamName}>{match.away_team_name}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -443,5 +570,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     marginHorizontal: 10,
+  },
+  leftMenu: {
+    width: 80,
+    backgroundColor: '#1a237e',
+    padding: 10,
+    paddingTop: 40,
+    alignItems: 'center',
+  },
+  menuItem: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    width: '100%',
+  },
+  activeMenuItem: {
+    backgroundColor: '#303f9f',
+  },
+  menuText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  mainContainer: {
+    flex: 1,
+    flexDirection: 'row',
   },
 });

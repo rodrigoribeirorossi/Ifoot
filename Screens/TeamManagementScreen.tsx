@@ -71,7 +71,7 @@ export default function TeamManagementScreen() {
   const [teamName, setTeamName] = useState('Meu Time');
   const [nextMatch, setNextMatch] = useState<NextMatch | null>(null);
   const [loadingNextMatch, setLoadingNextMatch] = useState(false);
-  const [currentSeasonId, setCurrentSeasonId] = useState(null);
+  const [currentSeasonId, setCurrentSeasonId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
   // Formações disponíveis
@@ -248,23 +248,58 @@ export default function TeamManagementScreen() {
     fetchTeamData();
   }, [teamId]);
   
-  // Função para obter a temporada atual
-  const fetchCurrentSeason = async () => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/teams/${teamId}/current-season`);
-      const data = await response.json();
-      if (data.seasonId) {
-        setCurrentSeasonId(data.seasonId);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar temporada atual:', error);
-    }
-  };
+const navigateToCalendar = () => {
+  console.log('Tentando navegar para Calendário. Season ID:', currentSeasonId);
+  // Navega independentemente do currentSeasonId
+  navigation.navigate('Calendar', { 
+    teamId, 
+    seasonId: currentSeasonId || 0,
+    hasActiveSeason: currentSeasonId !== null
+  });
+};
 
-  // Chame esta função no useEffect
-  useEffect(() => {
-    fetchCurrentSeason();
-  }, [teamId]);
+const navigateToCompetitions = () => {
+  console.log('Tentando navegar para Competições. Season ID:', currentSeasonId);
+  // Navega independentemente do currentSeasonId
+  navigation.navigate('Competitions', { 
+    teamId, 
+    seasonId: currentSeasonId || 0,
+    hasActiveSeason: currentSeasonId !== null
+  });
+};
+// Função está sendo chamada no useEffect
+const fetchCurrentSeason = async () => {
+  try {
+    console.log('Buscando temporada atual para o time:', teamId);
+    const response = await fetch(`http://localhost:3001/api/teams/${teamId}/current-season`);
+    
+    if (!response.ok) {
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Resposta da API de temporada:', data);
+    
+    if (data.seasonId) {
+      setCurrentSeasonId(data.seasonId);
+      console.log('Temporada definida com sucesso:', data.seasonId);
+    } else {
+      console.log('Nenhuma temporada ativa encontrada');
+      setCurrentSeasonId(null);
+    }
+  } catch (error) {
+    console.error('Erro ao buscar temporada atual:', error);
+    setCurrentSeasonId(null);
+  }
+};
+
+useEffect(() => {
+  fetchCurrentSeason();
+  // Você pode adicionar um intervalo para verificar periodicamente se há uma temporada ativa
+  const intervalId = setInterval(fetchCurrentSeason, 10000); // Verifica a cada 10 segundos
+  
+  return () => clearInterval(intervalId); // Limpa o intervalo quando o componente é desmontado
+}, [teamId]);
   
   const handleFormationChange = (formationValue: string) => {
     const newFormation = formations.find(f => f.value === formationValue) || formations[0];
@@ -449,7 +484,6 @@ export default function TeamManagementScreen() {
     }
   };
   
-  // Então substitua o botão existente por este:
   return (
     <View style={styles.container}>
       {/* Menu de navegação esquerdo */}
@@ -471,26 +505,26 @@ export default function TeamManagementScreen() {
         
         {/* Botão de Calendário - Adicione este código */}
         <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => {
-            if (currentSeasonId) {
-              navigation.navigate('Calendar', { 
-                teamId: teamId, 
-                seasonId: currentSeasonId 
-              });
-            } else {
-              Alert.alert('Temporada não iniciada', 'Inicie uma temporada primeiro para acessar o calendário!');
-            }
-          }}
+          style={[styles.menuItem, { minHeight: 60 }]}
+          activeOpacity={0.6}
+          onPress={navigateToCalendar}
+          testID="calendar-button"
         >
           <MaterialIcons name="calendar-today" size={24} color="#fff" />
           <Text style={styles.menuText}>Calendário</Text>
         </TouchableOpacity>
         
-        <View style={styles.menuItem}>
+        {/* Botão de Competições - Código substituído */}
+        <TouchableOpacity 
+          style={[styles.menuItem, { minHeight: 60 }]}
+          activeOpacity={0.6}
+          onPress={navigateToCompetitions}
+          testID="competitions-button"
+        >
           <MaterialIcons name="emoji-events" size={24} color="#fff" />
           <Text style={styles.menuText}>Competições</Text>
-        </View>
+        </TouchableOpacity>
+        
         <View style={styles.menuItem}>
           <FontAwesome5 name="exchange-alt" size={24} color="#fff" />
           <Text style={styles.menuText}>Transferências</Text>
@@ -797,9 +831,12 @@ const styles = StyleSheet.create({
   },
   menuItem: {
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 10,
+    width: '100%',
   },
   activeMenuItem: {
     backgroundColor: '#303f9f',

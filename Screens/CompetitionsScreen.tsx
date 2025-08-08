@@ -7,7 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 type RootStackParamList = {
   Home: undefined;
   CompetitionDetail: { competitionId: number; teamId: number; competitionName: string };
-  // Adicione outras rotas conforme necessário
+  GameCentral: { teamId: number };
 };
 
 // Corrija o tipo de navegação
@@ -26,7 +26,11 @@ export default function CompetitionsScreen() {
   const route = useRoute();
   // Use o tipo correto de navegação
   const navigation = useNavigation<NavigationProp>();
-  const { teamId, seasonId } = route.params as { teamId: number; seasonId: number };
+  const { teamId, seasonId, hasActiveSeason = false } = route.params as { 
+    teamId: number; 
+    seasonId: number | null;
+    hasActiveSeason: boolean;
+  };
   
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +127,20 @@ export default function CompetitionsScreen() {
     <View style={styles.container}>
       <Text style={styles.header}>Competições</Text>
       
-      {loading ? (
+      {!hasActiveSeason ? (
+        <View style={styles.noSeasonContainer}>
+          <Text style={styles.noSeasonText}>Nenhuma temporada ativa encontrada.</Text>
+          <Text style={styles.noSeasonSubtext}>
+            Para ver as competições, você precisa iniciar uma temporada na Central de Jogo.
+          </Text>
+          <TouchableOpacity
+            style={styles.goToCentralButton}
+            onPress={() => navigation.navigate('GameCentral', { teamId })}
+          >
+            <Text style={styles.goToCentralButtonText}>Ir para Central de Jogo</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
         <View style={styles.loadingContainer}>
           <Text>Carregando competições...</Text>
         </View>
@@ -198,6 +215,34 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  noSeasonContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  noSeasonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  noSeasonSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  goToCentralButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  goToCentralButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });

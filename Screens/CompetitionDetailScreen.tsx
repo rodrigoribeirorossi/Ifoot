@@ -3,6 +3,21 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+type RootStackParamList = {
+  Home: undefined;
+  Match: { 
+    matchId: number; 
+    homeTeamId: number; 
+    awayTeamId: number; 
+    homeTeamName: string; 
+    awayTeamName: string;
+    competitionName?: string;
+  };
+  CompetitionDetail: { competitionId: number; teamId: number; competitionName: string };
+  GameCentral: { teamId: number };
+  // Outras rotas necessárias
+};
+
 type Team = {
   id: number;
   name: string;
@@ -25,18 +40,6 @@ type Match = {
   home_score: number | null;
   away_score: number | null;
   status: string;
-};
-
-type RootStackParamList = {
-  Match: { 
-    matchId: number; 
-    homeTeamId: number; 
-    awayTeamId: number; 
-    homeTeamName: string; 
-    awayTeamName: string;
-    competitionName?: string;
-  };
-  // Outras rotas necessárias
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;

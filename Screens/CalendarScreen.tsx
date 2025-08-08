@@ -3,6 +3,20 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+type RootStackParamList = {
+  Home: undefined;
+  GameCentral: { teamId: number };
+  Match: { 
+    matchId: number; 
+    homeTeamId: number; 
+    awayTeamId: number; 
+    homeTeamName: string; 
+    awayTeamName: string; 
+    competitionName?: string 
+  };
+  // Outras rotas se necessário
+};
+
 type Match = {
   id: number;
   competition_id: number;
@@ -19,24 +33,16 @@ type Match = {
   status: 'scheduled' | 'live' | 'completed' | 'postponed';
 };
 
-type RootStackParamList = {
-  Match: { 
-    matchId: number; 
-    homeTeamId: number; 
-    awayTeamId: number; 
-    homeTeamName: string; 
-    awayTeamName: string; 
-    competitionName?: string 
-  };
-  // Outras rotas se necessário
-};
-
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function CalendarScreen() {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
-  const { teamId, seasonId } = route.params as { teamId: number; seasonId: number };
+  const { teamId, seasonId, hasActiveSeason = false } = route.params as { 
+    teamId: number; 
+    seasonId: number | null;
+    hasActiveSeason: boolean;
+  };
   
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,7 +136,20 @@ export default function CalendarScreen() {
     <View style={styles.container}>
       <Text style={styles.header}>Calendário de Jogos</Text>
       
-      {loading ? (
+      {!hasActiveSeason ? (
+        <View style={styles.noSeasonContainer}>
+          <Text style={styles.noSeasonText}>Nenhuma temporada ativa encontrada.</Text>
+          <Text style={styles.noSeasonSubtext}>
+            Para ver o calendário de jogos, você precisa iniciar uma temporada na Central de Jogo.
+          </Text>
+          <TouchableOpacity
+            style={styles.goToCentralButton}
+            onPress={() => navigation.navigate('GameCentral', { teamId })}
+          >
+            <Text style={styles.goToCentralButtonText}>Ir para Central de Jogo</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
         <View style={styles.loadingContainer}>
           <Text>Carregando calendário...</Text>
         </View>
@@ -289,6 +308,35 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 10,
+    fontWeight: 'bold',
+  },
+  noSeasonContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noSeasonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  noSeasonSubtext: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  goToCentralButton: {
+    backgroundColor: '#1976d2',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  goToCentralButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
